@@ -35,15 +35,153 @@ __export(extension_exports, {
 });
 module.exports = __toCommonJS(extension_exports);
 var vscode = __toESM(require("vscode"));
+var coloringEnabled = false;
+var commentDeco;
+var keyDeco;
+var valueDeco;
 function activate(context) {
   console.log("Rowtate is now active!");
-  const disposable = vscode.commands.registerCommand(
-    "rowtate.toggle",
-    () => toggleKeyValueLayout()
+  commentDeco = vscode.window.createTextEditorDecorationType({
+    color: "#87c66b"
+  });
+  keyDeco = vscode.window.createTextEditorDecorationType({
+    color: "#cd6060ff"
+  });
+  valueDeco = vscode.window.createTextEditorDecorationType({
+    color: "#6aa2f7ff"
+  });
+  context.subscriptions.push(
+    vscode.commands.registerCommand(
+      "rowtate.toggle",
+      () => toggleKeyValueLayout()
+    ),
+    vscode.commands.registerCommand(
+      "rowtate.toggleColoring",
+      () => toggleColoring()
+    )
   );
-  context.subscriptions.push(disposable);
+  context.subscriptions.push(
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      if (coloringEnabled) applyRowtateDecorations();
+    }),
+    vscode.workspace.onDidChangeTextDocument(() => {
+      if (coloringEnabled) applyRowtateDecorations();
+    })
+  );
 }
 function deactivate() {
+}
+function toggleColoring() {
+  coloringEnabled = !coloringEnabled;
+  if (coloringEnabled) {
+    applyRowtateDecorations();
+    vscode.window.setStatusBarMessage("Rowtate coloring: ON", 2e3);
+  } else {
+    clearRowtateDecorations();
+    vscode.window.setStatusBarMessage("Rowtate coloring: OFF", 2e3);
+  }
+}
+function clearRowtateDecorations() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return;
+  editor.setDecorations(commentDeco, []);
+  editor.setDecorations(keyDeco, []);
+  editor.setDecorations(valueDeco, []);
+}
+function applyRowtateDecorations() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return;
+  const doc = editor.document;
+  const text = doc.getText();
+  const lines = text.split(/\r?\n/);
+  const commentRanges = [];
+  const keyRanges = [];
+  const valueRanges = [];
+  const blocks = splitIntoBlocks(lines);
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
+    if (line.trim().startsWith("//")) {
+      commentRanges.push(
+        new vscode.Range(
+          new vscode.Position(lineNo, 0),
+          new vscode.Position(lineNo, line.length)
+        )
+      );
+    }
+  }
+  let lineCursor = 0;
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const raw = lines[lineNo];
+    const trimmed = raw.trim();
+    if (!trimmed.startsWith("#")) continue;
+    if (trimmed.includes(",")) continue;
+    if (trimmed.startsWith("//")) continue;
+    const m = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
+    if (!m) continue;
+    const key = m[1];
+    const ws = m[2] ?? "";
+    const value = m[3] ?? "";
+    const keyStart = raw.indexOf(key);
+    if (keyStart < 0) continue;
+    const keyEnd = keyStart + key.length;
+    keyRanges.push(new vscode.Range(lineNo, keyStart, lineNo, keyEnd));
+    if (ws) {
+      const valueStart = keyEnd + ws.length;
+      const valueEnd = raw.length;
+      if (valueStart <= valueEnd) {
+        valueRanges.push(
+          new vscode.Range(lineNo, valueStart, lineNo, valueEnd)
+        );
+      }
+    }
+  }
+  {
+    const trimmedLines = lines.map((l) => l.trim());
+    let i = 0;
+    while (i < lines.length) {
+      if (trimmedLines[i] === "") {
+        i++;
+        continue;
+      }
+      if (trimmedLines[i].startsWith("//")) {
+        i++;
+        continue;
+      }
+      const headerLineNo = i;
+      const header = trimmedLines[headerLineNo];
+      if (header.startsWith("#") && header.includes(",")) {
+        let j = headerLineNo + 1;
+        while (j < lines.length && (trimmedLines[j] === "" || trimmedLines[j].startsWith("//")))
+          j++;
+        if (j < lines.length) {
+          const valuesLineNo = j;
+          const values = trimmedLines[valuesLineNo];
+          keyRanges.push(
+            new vscode.Range(
+              headerLineNo,
+              0,
+              headerLineNo,
+              lines[headerLineNo].length
+            )
+          );
+          valueRanges.push(
+            new vscode.Range(
+              valuesLineNo,
+              0,
+              valuesLineNo,
+              lines[valuesLineNo].length
+            )
+          );
+          i = valuesLineNo + 1;
+          continue;
+        }
+      }
+      i++;
+    }
+  }
+  editor.setDecorations(commentDeco, commentRanges);
+  editor.setDecorations(keyDeco, keyRanges);
+  editor.setDecorations(valueDeco, valueRanges);
 }
 async function toggleKeyValueLayout() {
   const editor = vscode.window.activeTextEditor;
@@ -124,33 +262,53 @@ function toHorizontal(allLines) {
     const preserved = [];
     const keys = [];
     const values = [];
-    for (const rawLine of block) {
+    let pendingKey = null;
+    const flushPending = () => {
+      if (pendingKey !== null) {
+        keys.push(pendingKey);
+        values.push("");
+        pendingKey = null;
+      }
+    };
+    for (let idx = 0; idx < block.length; idx++) {
+      const rawLine = block[idx];
       const trimmed = rawLine.trim();
       if (!trimmed) continue;
       if (trimmed.startsWith("//")) {
         preserved.push(rawLine);
         continue;
       }
-      if (!trimmed.startsWith("#")) {
-        preserved.push(rawLine);
+      if (pendingKey !== null) {
+        if (trimmed.startsWith("#")) {
+          keys.push(pendingKey);
+          values.push("");
+          pendingKey = null;
+        } else {
+          keys.push(pendingKey);
+          values.push(trimmed);
+          pendingKey = null;
+          continue;
+        }
+      }
+      if (trimmed.startsWith("#")) {
+        const m = trimmed.match(/^(\S+)\s+(.+)$/);
+        if (m) {
+          keys.push(m[1].trim());
+          values.push(m[2].trim());
+          continue;
+        }
+        pendingKey = trimmed;
         continue;
       }
-      const m = trimmed.match(/^(\S+)\s*(.*)$/);
-      if (!m) {
-        preserved.push(rawLine);
-        continue;
-      }
-      const key = m[1].trim();
-      const value = (m[2] ?? "").trim();
-      keys.push(key);
-      values.push(value);
+      preserved.push(rawLine);
     }
+    flushPending();
     if (keys.length === 0) {
       outBlocks.push(block.join("\n"));
       continue;
     }
     const csvBlock = `${keys.join(",")}
-${values.join(",")}`;
+${values.map(csvEncodeField).join(",")}`;
     const out = preserved.length > 0 ? `${preserved.join("\n")}
 ${csvBlock}` : csvBlock;
     outBlocks.push(out);
@@ -163,46 +321,49 @@ function splitSimpleCsvLine(line) {
   let inQuotes = false;
   for (let i = 0; i < line.length; i++) {
     const ch = line[i];
+    if (ch === "," && !inQuotes) {
+      out.push(normalizeField(cur));
+      cur = "";
+      continue;
+    }
     if (ch === '"') {
-      if (inQuotes) {
-        const next = line[i + 1];
-        if (next === '"') {
-          cur += '"';
-          i++;
-          continue;
-        }
-        inQuotes = false;
-        continue;
-      } else {
-        inQuotes = true;
+      const next = line[i + 1];
+      if (inQuotes && next === '"') {
+        cur += '""';
+        i++;
         continue;
       }
+      inQuotes = !inQuotes;
+      cur += '"';
+      continue;
     }
     if (ch === "\\" && inQuotes) {
       const next = line[i + 1];
       if (next === '"' || next === "\\") {
-        cur += next;
+        cur += "\\" + next;
         i++;
         continue;
       }
-      cur += ch;
-      continue;
-    }
-    if (ch === "," && !inQuotes) {
-      out.push(cur.trim());
-      cur = "";
-      continue;
     }
     cur += ch;
   }
-  out.push(cur.trim());
-  return out.map((field) => {
-    const f = field.trim();
-    if (f.length >= 2 && f.startsWith('"') && f.endsWith('"')) {
-      return f.slice(1, -1);
-    }
-    return f;
-  });
+  out.push(normalizeField(cur));
+  return out;
+}
+function normalizeField(field) {
+  const f = field.trim();
+  return f;
+}
+function csvEncodeField(field) {
+  if (field === "") return "";
+  const trimmed = field.trim();
+  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
+    return trimmed;
+  }
+  const needsQuotes = /[",\r\n]/.test(field) || field !== field.trim();
+  if (!needsQuotes) return field;
+  const escaped = field.replace(/"/g, '""');
+  return `"${escaped}"`;
 }
 function splitIntoBlocks(lines) {
   const blocks = [];

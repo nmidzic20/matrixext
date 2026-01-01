@@ -14,12 +14,12 @@
   "contributes": {
     "commands": [
       {
-        "command": "rowtate.helloWorld",
-        "title": "Hello World"
-      },
-      {
         "command": "rowtate.toggle",
         "title": "Rowtate: Toggle Key/Value Layout"
+      },
+      {
+        "command": "rowtate.toggleColoring",
+        "title": "Rowtate: Toggle Coloring"
       }
     ]
   },
