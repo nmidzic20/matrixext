@@ -65,6 +65,107 @@ function clearRowtateDecorations() {
   editor.setDecorations(valueDeco, []);
 }
 
+function applyVerticalDecorations(
+  lines: string[],
+  keyRanges: vscode.Range[],
+  valueRanges: vscode.Range[]
+) {
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const raw = lines[lineNo];
+    const trimmed = raw.trim();
+
+    if (!trimmed.startsWith("#")) continue;
+    if (trimmed.startsWith("//")) continue;
+
+    // Find first whitespace after key token
+    // key token = first non-space token (starts with #)
+    const keyMatch =
+      trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
+    if (!keyMatch) continue;
+
+    const key = keyMatch[1];
+    const ws = keyMatch[2] ?? "";
+    // const value = keyMatch[3] ?? ""; // not needed for ranges
+
+    const keyStart = raw.indexOf(key);
+    if (keyStart < 0) continue;
+    const keyEnd = keyStart + key.length;
+
+    keyRanges.push(new vscode.Range(lineNo, keyStart, lineNo, keyEnd));
+
+    if (ws) {
+      const valueStart = keyEnd + ws.length;
+      const valueEnd = raw.length;
+      if (valueStart <= valueEnd) {
+        valueRanges.push(
+          new vscode.Range(lineNo, valueStart, lineNo, valueEnd)
+        );
+      }
+    }
+  }
+}
+
+function applyHorizontalDecorations(
+  lines: string[],
+  keyRanges: vscode.Range[],
+  valueRanges: vscode.Range[]
+) {
+  const trimmedLines = lines.map((l) => l.trim());
+
+  let i = 0;
+  while (i < lines.length) {
+    if (trimmedLines[i] === "") {
+      i++;
+      continue;
+    }
+    if (trimmedLines[i].startsWith("//")) {
+      i++;
+      continue;
+    }
+
+    const headerLineNo = i;
+    const header = trimmedLines[headerLineNo];
+
+    if (header.startsWith("#") && header.includes(",")) {
+      // find next non-empty, non-comment line for values
+      let j = headerLineNo + 1;
+      while (
+        j < lines.length &&
+        (trimmedLines[j] === "" || trimmedLines[j].startsWith("//"))
+      )
+        j++;
+
+      if (j < lines.length) {
+        const valuesLineNo = j;
+
+        // entire header as keys
+        keyRanges.push(
+          new vscode.Range(
+            headerLineNo,
+            0,
+            headerLineNo,
+            lines[headerLineNo].length
+          )
+        );
+        // entire values as values
+        valueRanges.push(
+          new vscode.Range(
+            valuesLineNo,
+            0,
+            valuesLineNo,
+            lines[valuesLineNo].length
+          )
+        );
+
+        i = valuesLineNo + 1;
+        continue;
+      }
+    }
+
+    i++;
+  }
+}
+
 function applyRowtateDecorations() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) return;
@@ -77,10 +178,7 @@ function applyRowtateDecorations() {
   const keyRanges: vscode.Range[] = [];
   const valueRanges: vscode.Range[] = [];
 
-  // Identify if we are in horizontal CSV mode by blocks
-  const blocks = splitIntoBlocks(lines);
-
-  // 1) Always color comment lines green (whole line)
+  // 1) Always color comment lines (whole line)
   for (let lineNo = 0; lineNo < lines.length; lineNo++) {
     const line = lines[lineNo];
     if (line.trim().startsWith("//")) {
@@ -93,115 +191,13 @@ function applyRowtateDecorations() {
     }
   }
 
-  // 2) For each block, decide if it's horizontal or vertical and color accordingly
-  let lineCursor = 0; // used to map block lines to document line numbers
+  // 2) Decide mode and apply ONLY that mode's decorations
+  const isHorizontal = looksLikeHorizontalCsv(lines);
 
-  // We'll build a map from line content to absolute line numbers by walking through `lines`
-  // (simpler: just scan `lines` directly for vertical rows; then separately scan blocks for horizontal header/value)
-  // Do both approaches safely:
-
-  // 2a) Vertical rows: lines starting with #key...
-  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-    const raw = lines[lineNo];
-    const trimmed = raw.trim();
-
-    if (!trimmed.startsWith("#")) continue; // keys always start with #
-    if (trimmed.includes(",")) continue; // likely horizontal header, handled below
-    if (trimmed.startsWith("//")) continue; // comment already handled
-
-    // Split into key + value by first whitespace
-    // - key: first non-space token
-    // - value: rest (can be empty)
-    const m = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
-    if (!m) continue;
-
-    const key = m[1];
-    const ws = m[2] ?? "";
-    const value = m[3] ?? "";
-
-    // Find key start/end in the original raw line (respect indentation)
-    const keyStart = raw.indexOf(key);
-    if (keyStart < 0) continue;
-    const keyEnd = keyStart + key.length;
-
-    keyRanges.push(new vscode.Range(lineNo, keyStart, lineNo, keyEnd));
-
-    // Value begins after the whitespace after key (if present)
-    if (ws) {
-      const valueStart = keyEnd + ws.length;
-      const valueEnd = raw.length; // highlight rest of line as value (including spaces inside)
-      if (valueStart <= valueEnd) {
-        valueRanges.push(
-          new vscode.Range(lineNo, valueStart, lineNo, valueEnd)
-        );
-      }
-    }
-  }
-
-  // 2b) Horizontal CSV: for each block, color first two non-comment lines as header(keys) + values
-  // (We rely on the file’s structure: header starts with # and contains commas.)
-  {
-    // Build a line index lookup: line number -> trimmed line
-    const trimmedLines = lines.map((l) => l.trim());
-
-    // Walk blocks using the original `lines` by scanning line numbers
-    let i = 0;
-    while (i < lines.length) {
-      // skip blank lines
-      if (trimmedLines[i] === "") {
-        i++;
-        continue;
-      }
-
-      // preserve comment lines
-      if (trimmedLines[i].startsWith("//")) {
-        i++;
-        continue;
-      }
-
-      const headerLineNo = i;
-      const header = trimmedLines[headerLineNo];
-
-      // if it looks like horizontal header
-      if (header.startsWith("#") && header.includes(",")) {
-        // find next non-empty, non-comment line for values
-        let j = headerLineNo + 1;
-        while (
-          j < lines.length &&
-          (trimmedLines[j] === "" || trimmedLines[j].startsWith("//"))
-        )
-          j++;
-        if (j < lines.length) {
-          const valuesLineNo = j;
-          const values = trimmedLines[valuesLineNo];
-
-          // Color entire header line as keys (simple + fast)
-          keyRanges.push(
-            new vscode.Range(
-              headerLineNo,
-              0,
-              headerLineNo,
-              lines[headerLineNo].length
-            )
-          );
-
-          // Color entire values line as values
-          valueRanges.push(
-            new vscode.Range(
-              valuesLineNo,
-              0,
-              valuesLineNo,
-              lines[valuesLineNo].length
-            )
-          );
-
-          i = valuesLineNo + 1;
-          continue;
-        }
-      }
-
-      i++;
-    }
+  if (isHorizontal) {
+    applyHorizontalDecorations(lines, keyRanges, valueRanges);
+  } else {
+    applyVerticalDecorations(lines, keyRanges, valueRanges);
   }
 
   editor.setDecorations(commentDeco, commentRanges);

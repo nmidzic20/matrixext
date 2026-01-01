@@ -88,39 +88,16 @@ function clearRowtateDecorations() {
   editor.setDecorations(keyDeco, []);
   editor.setDecorations(valueDeco, []);
 }
-function applyRowtateDecorations() {
-  const editor = vscode.window.activeTextEditor;
-  if (!editor) return;
-  const doc = editor.document;
-  const text = doc.getText();
-  const lines = text.split(/\r?\n/);
-  const commentRanges = [];
-  const keyRanges = [];
-  const valueRanges = [];
-  const blocks = splitIntoBlocks(lines);
-  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-    const line = lines[lineNo];
-    if (line.trim().startsWith("//")) {
-      commentRanges.push(
-        new vscode.Range(
-          new vscode.Position(lineNo, 0),
-          new vscode.Position(lineNo, line.length)
-        )
-      );
-    }
-  }
-  let lineCursor = 0;
+function applyVerticalDecorations(lines, keyRanges, valueRanges) {
   for (let lineNo = 0; lineNo < lines.length; lineNo++) {
     const raw = lines[lineNo];
     const trimmed = raw.trim();
     if (!trimmed.startsWith("#")) continue;
-    if (trimmed.includes(",")) continue;
     if (trimmed.startsWith("//")) continue;
-    const m = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
-    if (!m) continue;
-    const key = m[1];
-    const ws = m[2] ?? "";
-    const value = m[3] ?? "";
+    const keyMatch = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
+    if (!keyMatch) continue;
+    const key = keyMatch[1];
+    const ws = keyMatch[2] ?? "";
     const keyStart = raw.indexOf(key);
     if (keyStart < 0) continue;
     const keyEnd = keyStart + key.length;
@@ -135,49 +112,75 @@ function applyRowtateDecorations() {
       }
     }
   }
-  {
-    const trimmedLines = lines.map((l) => l.trim());
-    let i = 0;
-    while (i < lines.length) {
-      if (trimmedLines[i] === "") {
-        i++;
-        continue;
-      }
-      if (trimmedLines[i].startsWith("//")) {
-        i++;
-        continue;
-      }
-      const headerLineNo = i;
-      const header = trimmedLines[headerLineNo];
-      if (header.startsWith("#") && header.includes(",")) {
-        let j = headerLineNo + 1;
-        while (j < lines.length && (trimmedLines[j] === "" || trimmedLines[j].startsWith("//")))
-          j++;
-        if (j < lines.length) {
-          const valuesLineNo = j;
-          const values = trimmedLines[valuesLineNo];
-          keyRanges.push(
-            new vscode.Range(
-              headerLineNo,
-              0,
-              headerLineNo,
-              lines[headerLineNo].length
-            )
-          );
-          valueRanges.push(
-            new vscode.Range(
-              valuesLineNo,
-              0,
-              valuesLineNo,
-              lines[valuesLineNo].length
-            )
-          );
-          i = valuesLineNo + 1;
-          continue;
-        }
-      }
+}
+function applyHorizontalDecorations(lines, keyRanges, valueRanges) {
+  const trimmedLines = lines.map((l) => l.trim());
+  let i = 0;
+  while (i < lines.length) {
+    if (trimmedLines[i] === "") {
       i++;
+      continue;
     }
+    if (trimmedLines[i].startsWith("//")) {
+      i++;
+      continue;
+    }
+    const headerLineNo = i;
+    const header = trimmedLines[headerLineNo];
+    if (header.startsWith("#") && header.includes(",")) {
+      let j = headerLineNo + 1;
+      while (j < lines.length && (trimmedLines[j] === "" || trimmedLines[j].startsWith("//")))
+        j++;
+      if (j < lines.length) {
+        const valuesLineNo = j;
+        keyRanges.push(
+          new vscode.Range(
+            headerLineNo,
+            0,
+            headerLineNo,
+            lines[headerLineNo].length
+          )
+        );
+        valueRanges.push(
+          new vscode.Range(
+            valuesLineNo,
+            0,
+            valuesLineNo,
+            lines[valuesLineNo].length
+          )
+        );
+        i = valuesLineNo + 1;
+        continue;
+      }
+    }
+    i++;
+  }
+}
+function applyRowtateDecorations() {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) return;
+  const doc = editor.document;
+  const text = doc.getText();
+  const lines = text.split(/\r?\n/);
+  const commentRanges = [];
+  const keyRanges = [];
+  const valueRanges = [];
+  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
+    const line = lines[lineNo];
+    if (line.trim().startsWith("//")) {
+      commentRanges.push(
+        new vscode.Range(
+          new vscode.Position(lineNo, 0),
+          new vscode.Position(lineNo, line.length)
+        )
+      );
+    }
+  }
+  const isHorizontal = looksLikeHorizontalCsv(lines);
+  if (isHorizontal) {
+    applyHorizontalDecorations(lines, keyRanges, valueRanges);
+  } else {
+    applyVerticalDecorations(lines, keyRanges, valueRanges);
   }
   editor.setDecorations(commentDeco, commentRanges);
   editor.setDecorations(keyDeco, keyRanges);
