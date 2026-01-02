@@ -20,6 +20,10 @@
       {
         "command": "rowtate.toggleColoring",
         "title": "Rowtate: Toggle Coloring"
+      },
+      {
+        "command": "rowtate.reorderVertical",
+        "title": "Rowtate: Reorder Rows (Vertical Drag & Drop)"
       }
     ]
   },
