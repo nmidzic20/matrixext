@@ -6,22 +6,23 @@ let commentDeco: vscode.TextEditorDecorationType;
 let keyDeco: vscode.TextEditorDecorationType;
 let valueDeco: vscode.TextEditorDecorationType;
 
+let rowtateStatusItem: vscode.StatusBarItem;
+
 export function activate(context: vscode.ExtensionContext) {
   console.log("Rowtate is now active!");
 
-  // Decorations
-  commentDeco = vscode.window.createTextEditorDecorationType({
-    color: "#87c66b",
-  });
+  // Build decorations from settings (instead of hardcoded colors)
+  rebuildDecorations(context);
 
-  keyDeco = vscode.window.createTextEditorDecorationType({
-    color: "#cd6060ff",
-  });
+  // Status bar item
+  rowtateStatusItem = vscode.window.createStatusBarItem(
+    vscode.StatusBarAlignment.Left,
+    1000
+  );
+  rowtateStatusItem.hide();
+  context.subscriptions.push(rowtateStatusItem);
 
-  valueDeco = vscode.window.createTextEditorDecorationType({
-    color: "#6aa2f7ff",
-  });
-
+  // Commands
   context.subscriptions.push(
     vscode.commands.registerCommand("rowtate.toggle", () =>
       toggleKeyValueLayout()
@@ -37,7 +38,24 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("rowtate.blocksToHorizontal", () =>
       convertSelectedBlocks("toHorizontal")
+    ),
+    vscode.commands.registerCommand("rowtate.pickColors", () =>
+      openColorPickerWebview(context)
     )
+  );
+
+  // Rebuild decorations when Rowtate color settings change
+  context.subscriptions.push(
+    vscode.workspace.onDidChangeConfiguration((e) => {
+      if (
+        e.affectsConfiguration("rowtate.colors.comment") ||
+        e.affectsConfiguration("rowtate.colors.key") ||
+        e.affectsConfiguration("rowtate.colors.value")
+      ) {
+        rebuildDecorations(context);
+        if (coloringEnabled) applyRowtateDecorations();
+      }
+    })
   );
 
   // Re-apply on editor/document changes when enabled
@@ -52,6 +70,250 @@ export function activate(context: vscode.ExtensionContext) {
 }
 
 export function deactivate() {}
+
+function getRowtateColors() {
+  const cfg = vscode.workspace.getConfiguration("rowtate");
+  return {
+    comment: cfg.get<string>("colors.comment", "#87c66b"),
+    key: cfg.get<string>("colors.key", "#cd6060ff"),
+    value: cfg.get<string>("colors.value", "#6aa2f7ff"),
+    target: cfg.get<string>("colors.target", "user") as "user" | "workspace",
+  };
+}
+
+function rebuildDecorations(context: vscode.ExtensionContext) {
+  // Dispose previous decoration types so they don't leak
+  commentDeco?.dispose();
+  keyDeco?.dispose();
+  valueDeco?.dispose();
+
+  const colors = getRowtateColors();
+
+  commentDeco = vscode.window.createTextEditorDecorationType({
+    color: colors.comment,
+  });
+
+  keyDeco = vscode.window.createTextEditorDecorationType({
+    color: colors.key,
+  });
+
+  valueDeco = vscode.window.createTextEditorDecorationType({
+    color: colors.value,
+  });
+
+  // Ensure they are disposed on deactivate
+  context.subscriptions.push(commentDeco, keyDeco, valueDeco);
+}
+
+async function openColorPickerWebview(context: vscode.ExtensionContext) {
+  const colors = getRowtateColors();
+
+  const panel = vscode.window.createWebviewPanel(
+    "rowtateColors",
+    "Rowtate: Pick Colors",
+    vscode.ViewColumn.Active,
+    { enableScripts: true, retainContextWhenHidden: false }
+  );
+
+  panel.webview.html = getColorPickerHtml(panel.webview, colors);
+
+  panel.webview.onDidReceiveMessage(async (msg) => {
+    if (!msg || typeof msg.type !== "string") return;
+
+    if (msg.type === "save") {
+      const { comment, key, value } = msg.colors ?? {};
+      if (
+        typeof comment !== "string" ||
+        typeof key !== "string" ||
+        typeof value !== "string"
+      )
+        return;
+
+      const cfg = vscode.workspace.getConfiguration("rowtate");
+
+      const target =
+        colors.target === "workspace"
+          ? vscode.ConfigurationTarget.Workspace
+          : vscode.ConfigurationTarget.Global;
+
+      await cfg.update("colors.comment", comment, target);
+      await cfg.update("colors.key", key, target);
+      await cfg.update("colors.value", value, target);
+
+      rebuildDecorations(context);
+      if (coloringEnabled) applyRowtateDecorations();
+
+      panel.dispose();
+    }
+
+    if (msg.type === "cancel") {
+      panel.dispose();
+    }
+
+    if (msg.type === "reset") {
+      const cfg = vscode.workspace.getConfiguration("rowtate");
+      const target =
+        colors.target === "workspace"
+          ? vscode.ConfigurationTarget.Workspace
+          : vscode.ConfigurationTarget.Global;
+
+      await cfg.update("colors.comment", undefined, target);
+      await cfg.update("colors.key", undefined, target);
+      await cfg.update("colors.value", undefined, target);
+
+      rebuildDecorations(context);
+      if (coloringEnabled) applyRowtateDecorations();
+
+      panel.dispose();
+    }
+  });
+}
+
+function getColorPickerHtml(
+  webview: vscode.Webview,
+  colors: {
+    comment: string;
+    key: string;
+    value: string;
+    target: "user" | "workspace";
+  }
+) {
+  const nonce = getNonce();
+  const csp = `
+    default-src 'none';
+    style-src ${webview.cspSource} 'unsafe-inline';
+    script-src 'nonce-${nonce}';
+  `
+    .replace(/\s+/g, " ")
+    .trim();
+
+  // <input type="color"> only supports #RRGGBB, so we normalize by slicing first 7 chars if needed
+  const norm = (c: string) =>
+    c.startsWith("#") && c.length >= 7 ? c.slice(0, 7) : "#000000";
+
+  return /* html */ `<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <meta http-equiv="Content-Security-Policy" content="${csp}">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Rowtate: Pick Colors</title>
+  <style>
+    body { font-family: system-ui, sans-serif; padding: 16px; }
+    .card { border: 1px solid #4444; border-radius: 10px; padding: 14px; }
+    .row { display:flex; align-items:center; gap: 12px; margin: 12px 0; }
+    label { width: 110px; opacity: .85; }
+    input[type="text"] { width: 140px; padding: 6px 8px; }
+    input[type="color"] { width: 44px; height: 30px; padding: 0; border: none; background: none; }
+    .preview { margin-top: 14px; padding: 12px; border-radius: 8px; border: 1px solid #4444; background: var(--vscode-editor-background); }
+    .mono { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, "Liberation Mono", "Courier New", monospace; white-space: pre; }
+    .btns { display:flex; gap: 8px; margin-top: 14px; }
+    button { padding: 6px 10px; cursor: pointer; }
+    .small { opacity: .7; font-size: 12px; margin-top: 8px; }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="row">
+      <label>Comment</label>
+      <input id="commentPicker" type="color" value="${norm(colors.comment)}">
+      <input id="commentText" type="text" value="${colors.comment}">
+    </div>
+
+    <div class="row">
+      <label>Key</label>
+      <input id="keyPicker" type="color" value="${norm(colors.key)}">
+      <input id="keyText" type="text" value="${colors.key}">
+    </div>
+
+    <div class="row">
+      <label>Value</label>
+      <input id="valuePicker" type="color" value="${norm(colors.value)}">
+      <input id="valueText" type="text" value="${colors.value}">
+    </div>
+
+    <div class="preview mono" id="preview">
+<span id="cmt">// comment line</span>
+<span id="key">#Key</span>\t<span id="val">Value</span>
+    </div>
+
+    <div class="btns">
+      <button id="save">Save</button>
+      <button id="cancel">Cancel</button>
+      <button id="reset">Reset defaults</button>
+    </div>
+
+    <div class="small">
+      Saved to: <b>${colors.target === "workspace" ? "Workspace" : "User"}</b>
+      (change via <code>rowtate.colors.target</code> setting)
+    </div>
+  </div>
+
+  <script nonce="${nonce}">
+    const vscode = acquireVsCodeApi();
+
+    const commentPicker = document.getElementById("commentPicker");
+    const keyPicker = document.getElementById("keyPicker");
+    const valuePicker = document.getElementById("valuePicker");
+
+    const commentText = document.getElementById("commentText");
+    const keyText = document.getElementById("keyText");
+    const valueText = document.getElementById("valueText");
+
+    const cmt = document.getElementById("cmt");
+    const key = document.getElementById("key");
+    const val = document.getElementById("val");
+
+    function applyPreview() {
+      cmt.style.color = commentText.value;
+      key.style.color = keyText.value;
+      val.style.color = valueText.value;
+    }
+
+    function syncFromPicker(picker, text) {
+      text.value = picker.value;
+      applyPreview();
+    }
+
+    function syncFromText(text, picker) {
+      // Accept any CSS color string in text (hex/rgb/etc), but only update picker if it's #RRGGBB
+      const v = text.value.trim();
+      if (/^#[0-9a-fA-F]{6}$/.test(v)) picker.value = v;
+      applyPreview();
+    }
+
+    commentPicker.addEventListener("input", () => syncFromPicker(commentPicker, commentText));
+    keyPicker.addEventListener("input", () => syncFromPicker(keyPicker, keyText));
+    valuePicker.addEventListener("input", () => syncFromPicker(valuePicker, valueText));
+
+    commentText.addEventListener("input", () => syncFromText(commentText, commentPicker));
+    keyText.addEventListener("input", () => syncFromText(keyText, keyPicker));
+    valueText.addEventListener("input", () => syncFromText(valueText, valuePicker));
+
+    document.getElementById("save").addEventListener("click", () => {
+      vscode.postMessage({
+        type: "save",
+        colors: {
+          comment: commentText.value.trim(),
+          key: keyText.value.trim(),
+          value: valueText.value.trim()
+        }
+      });
+    });
+
+    document.getElementById("cancel").addEventListener("click", () => {
+      vscode.postMessage({ type: "cancel" });
+    });
+
+    document.getElementById("reset").addEventListener("click", () => {
+      vscode.postMessage({ type: "reset" });
+    });
+
+    applyPreview();
+  </script>
+</body>
+</html>`;
+}
 
 function toggleColoring() {
   coloringEnabled = !coloringEnabled;
@@ -304,7 +566,6 @@ async function toggleKeyValueLayout() {
 
   const doc = editor.document;
   const text = doc.getText();
-
   const lines = text.split(/\r?\n/);
 
   if (lines.every((l) => l.trim().length === 0)) {
@@ -312,12 +573,44 @@ async function toggleKeyValueLayout() {
     return;
   }
 
+  const mode = detectFileMode(lines);
+
+  let status: vscode.Disposable | undefined;
+
+  if (mode === "mixed") {
+    rowtateStatusItem.text = "$(sync) Rowtate: Mixed → Vertical";
+    rowtateStatusItem.show();
+  }
+
   let newText: string;
 
-  if (looksLikeHorizontalCsv(lines)) {
+  if (mode === "horizontal") {
+    // same as before
     newText = toVertical(lines);
-  } else {
+  } else if (mode === "vertical") {
+    // same as before
     newText = toHorizontal(lines);
+  } else {
+    // mixed => convert ALL to vertical by converting only horizontal blocks
+    const segments = splitIntoSegments(lines);
+    const newLines: string[] = [];
+
+    for (const seg of segments) {
+      if (seg.kind === "blank") {
+        newLines.push(...seg.lines);
+        continue;
+      }
+
+      // block
+      if (isHorizontalBlock(seg.lines)) {
+        newLines.push(...convertBlockToVertical(seg.lines));
+      } else {
+        // already vertical (or unknown) => keep as-is
+        newLines.push(...seg.lines);
+      }
+    }
+
+    newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
   }
 
   const fullRange = new vscode.Range(
@@ -330,6 +623,10 @@ async function toggleKeyValueLayout() {
   await vscode.workspace.applyEdit(edit);
 
   if (coloringEnabled) applyRowtateDecorations();
+
+  if (mode === "mixed") {
+    setTimeout(() => rowtateStatusItem.hide(), 2500);
+  }
 }
 
 // ---------- Layout detection ----------
@@ -613,7 +910,8 @@ async function openReorderWebview() {
     }
   );
 
-  panel.webview.html = getReorderWebviewHtml(panel.webview, lines);
+  const colors = getRowtateColors();
+  panel.webview.html = getReorderWebviewHtml(panel.webview, lines, colors);
 
   panel.webview.onDidReceiveMessage(async (msg) => {
     if (!msg || typeof msg.type !== "string") return;
@@ -645,7 +943,8 @@ async function openReorderWebview() {
 }
 function getReorderWebviewHtml(
   webview: vscode.Webview,
-  lines: string[]
+  lines: string[],
+  colors: { comment: string; key: string; value: string }
 ): string {
   const nonce = getNonce();
   const data = JSON.stringify(lines);
@@ -702,9 +1001,10 @@ function getReorderWebviewHtml(
     .row.drop-target { outline: 2px dashed #888; outline-offset: -2px; }
 
     .text { white-space: pre; overflow-x: auto; }
-    .comment { color: #87c66b; }
-    .kv-key { color: #cd6060ff; }
-    .kv-val { color: #6aa2f7ff; }
+    .comment { color: ${colors.comment}; }
+    .kv-key { color: ${colors.key}; }
+    .kv-val { color: ${colors.value}; }
+
 
     .blank .text { opacity: 0.5; font-style: italic; }
   </style>
@@ -1144,4 +1444,28 @@ async function convertSelectedBlocks(direction: "toVertical" | "toHorizontal") {
   edit.replace(doc.uri, fullRange, newText);
   await vscode.workspace.applyEdit(edit);
   if (coloringEnabled) applyRowtateDecorations();
+}
+
+type FileMode = "horizontal" | "vertical" | "mixed";
+
+function detectFileMode(lines: string[]): FileMode {
+  const segments = splitIntoSegments(lines);
+
+  let h = 0;
+  let v = 0;
+
+  for (const seg of segments) {
+    if (seg.kind !== "block") continue;
+
+    if (isHorizontalBlock(seg.lines)) h++;
+    else if (isVerticalBlock(seg.lines)) v++;
+    else {
+      // Unknown blocks: treat as vertical-ish so we don't aggressively horizontalize them
+      v++;
+    }
+  }
+
+  if (h > 0 && v > 0) return "mixed";
+  if (h > 0) return "horizontal";
+  return "vertical";
 }

@@ -12,6 +12,35 @@
   "activationEvents": [],
   "main": "./dist/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "Rowtate",
+      "properties": {
+        "rowtate.colors.comment": {
+          "type": "string",
+          "default": "#87c66b",
+          "description": "Rowtate comment color (e.g. #87c66b)."
+        },
+        "rowtate.colors.key": {
+          "type": "string",
+          "default": "#cd6060ff",
+          "description": "Rowtate key color (e.g. #cd6060ff)."
+        },
+        "rowtate.colors.value": {
+          "type": "string",
+          "default": "#6aa2f7ff",
+          "description": "Rowtate value color (e.g. #6aa2f7ff)."
+        },
+        "rowtate.colors.target": {
+          "type": "string",
+          "enum": [
+            "user",
+            "workspace"
+          ],
+          "default": "user",
+          "description": "Where Rowtate saves picked colors."
+        }
+      }
+    },
     "commands": [
       {
         "command": "rowtate.toggle",
@@ -32,6 +61,10 @@
       {
         "command": "rowtate.blocksToHorizontal",
         "title": "Rowtate: Convert Selected Blocks to Horizontal"
+      },
+      {
+        "command": "rowtate.pickColors",
+        "title": "Rowtate: Pick Colors"
       }
     ]
   },
