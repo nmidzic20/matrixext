@@ -31,6 +31,12 @@ export function activate(context: vscode.ExtensionContext) {
     ),
     vscode.commands.registerCommand("rowtate.reorderVertical", () =>
       openReorderWebview()
+    ),
+    vscode.commands.registerCommand("rowtate.blocksToVertical", () =>
+      convertSelectedBlocks("toVertical")
+    ),
+    vscode.commands.registerCommand("rowtate.blocksToHorizontal", () =>
+      convertSelectedBlocks("toHorizontal")
     )
   );
 
@@ -181,7 +187,7 @@ function applyRowtateDecorations() {
   const keyRanges: vscode.Range[] = [];
   const valueRanges: vscode.Range[] = [];
 
-  // 1) Always color comment lines (whole line)
+  // 1) Always color comment lines (whole line) across the entire file
   for (let lineNo = 0; lineNo < lines.length; lineNo++) {
     const line = lines[lineNo];
     if (line.trim().startsWith("//")) {
@@ -194,18 +200,99 @@ function applyRowtateDecorations() {
     }
   }
 
-  // 2) Decide mode and apply ONLY that mode's decorations
-  const isHorizontal = looksLikeHorizontalCsv(lines);
+  // 2) Color per-block (supports mixed horizontal + vertical in same file)
+  const segments = splitIntoSegments(lines);
 
-  if (isHorizontal) {
-    applyHorizontalDecorations(lines, keyRanges, valueRanges);
-  } else {
-    applyVerticalDecorations(lines, keyRanges, valueRanges);
+  for (const seg of segments) {
+    if (seg.kind !== "block") continue;
+
+    if (isHorizontalBlock(seg.lines)) {
+      applyHorizontalDecorationsForSegment(seg, keyRanges, valueRanges);
+    } else {
+      // Treat as vertical by default; this keeps coloring stable in mixed files
+      applyVerticalDecorationsForSegment(seg, keyRanges, valueRanges);
+    }
   }
 
   editor.setDecorations(commentDeco, commentRanges);
   editor.setDecorations(keyDeco, keyRanges);
   editor.setDecorations(valueDeco, valueRanges);
+}
+
+function applyVerticalDecorationsForSegment(
+  seg: Segment,
+  keyRanges: vscode.Range[],
+  valueRanges: vscode.Range[]
+) {
+  // seg.lines correspond to absolute lines seg.startLine ... seg.endLine
+  for (let i = 0; i < seg.lines.length; i++) {
+    const absLineNo = seg.startLine + i;
+    const raw = seg.lines[i];
+    const trimmed = raw.trim();
+
+    if (!trimmed.startsWith("#")) continue;
+    if (trimmed.startsWith("//")) continue;
+
+    // key token = first non-space token (#...)
+    const m = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
+    if (!m) continue;
+
+    const key = m[1];
+    const ws = m[2] ?? "";
+
+    const keyStart = raw.indexOf(key);
+    if (keyStart < 0) continue;
+    const keyEnd = keyStart + key.length;
+
+    keyRanges.push(new vscode.Range(absLineNo, keyStart, absLineNo, keyEnd));
+
+    if (ws) {
+      const valueStart = keyEnd + ws.length;
+      const valueEnd = raw.length;
+      if (valueStart <= valueEnd) {
+        valueRanges.push(
+          new vscode.Range(absLineNo, valueStart, absLineNo, valueEnd)
+        );
+      }
+    }
+  }
+}
+
+function applyHorizontalDecorationsForSegment(
+  seg: Segment,
+  keyRanges: vscode.Range[],
+  valueRanges: vscode.Range[]
+) {
+  const trimmed = seg.lines.map((l) => l.trim());
+
+  // Find first non-empty, non-comment line = header, next non-empty non-comment = values
+  let headerIdx = -1;
+  for (let i = 0; i < trimmed.length; i++) {
+    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
+    headerIdx = i;
+    break;
+  }
+  if (headerIdx < 0) return;
+
+  let valuesIdx = -1;
+  for (let i = headerIdx + 1; i < trimmed.length; i++) {
+    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
+    valuesIdx = i;
+    break;
+  }
+  if (valuesIdx < 0) return;
+
+  const headerAbs = seg.startLine + headerIdx;
+  const valuesAbs = seg.startLine + valuesIdx;
+
+  // Entire header line as keys
+  keyRanges.push(
+    new vscode.Range(headerAbs, 0, headerAbs, seg.lines[headerIdx].length)
+  );
+  // Entire values line as values
+  valueRanges.push(
+    new vscode.Range(valuesAbs, 0, valuesAbs, seg.lines[valuesIdx].length)
+  );
 }
 
 async function toggleKeyValueLayout() {
@@ -241,6 +328,8 @@ async function toggleKeyValueLayout() {
   const edit = new vscode.WorkspaceEdit();
   edit.replace(doc.uri, fullRange, newText);
   await vscode.workspace.applyEdit(edit);
+
+  if (coloringEnabled) applyRowtateDecorations();
 }
 
 // ---------- Layout detection ----------
@@ -776,4 +865,283 @@ function getNonce(): string {
     nonce += chars.charAt(Math.floor(Math.random() * chars.length));
   }
   return nonce;
+}
+
+type Segment =
+  | { kind: "blank"; lines: string[]; startLine: number; endLine: number }
+  | { kind: "block"; lines: string[]; startLine: number; endLine: number };
+
+function splitIntoSegments(lines: string[]): Segment[] {
+  const segs: Segment[] = [];
+  let i = 0;
+
+  while (i < lines.length) {
+    const start = i;
+    const isBlank = lines[i].trim() === "";
+
+    const buf: string[] = [];
+    while (i < lines.length && (lines[i].trim() === "") === isBlank) {
+      buf.push(lines[i]);
+      i++;
+    }
+
+    const end = i - 1;
+    segs.push({
+      kind: isBlank ? "blank" : "block",
+      lines: buf,
+      startLine: start,
+      endLine: end,
+    });
+  }
+
+  return segs;
+}
+
+function getSelectedBlockSegmentIndexes(
+  editor: vscode.TextEditor,
+  segments: Segment[]
+): Set<number> {
+  const selected = new Set<number>();
+
+  const selections = editor.selections;
+
+  for (const sel of selections) {
+    const a = sel.start.line;
+    const b = sel.end.line;
+    const selMin = Math.min(a, b);
+    const selMax = Math.max(a, b);
+
+    // Empty selection => pick block under cursor line
+    if (sel.isEmpty) {
+      const idx = segments.findIndex(
+        (s) =>
+          s.kind === "block" && s.startLine <= selMin && s.endLine >= selMin
+      );
+      if (idx >= 0) selected.add(idx);
+      continue;
+    }
+
+    // Non-empty selection => any block segment intersecting selection lines
+    for (let si = 0; si < segments.length; si++) {
+      const s = segments[si];
+      if (s.kind !== "block") continue;
+
+      const intersects = !(s.endLine < selMin || s.startLine > selMax);
+      if (intersects) selected.add(si);
+    }
+  }
+
+  return selected;
+}
+
+function isHorizontalBlock(blockLines: string[]): boolean {
+  // Find first two non-empty, non-comment lines
+  const content = blockLines
+    .map((l) => l.trim())
+    .filter((l) => l.length > 0 && !l.startsWith("//"));
+
+  if (content.length < 2) return false;
+
+  const header = content[0];
+  const values = content[1];
+
+  // Horizontal header is "#..." with commas; values line also comma-ish
+  if (!header.startsWith("#") || !header.includes(",")) return false;
+
+  const headerCommas = (header.match(/,/g) || []).length;
+  const valueCommas = (values.match(/,/g) || []).length;
+
+  return headerCommas >= 1 && valueCommas >= 1;
+}
+
+function isVerticalBlock(blockLines: string[]): boolean {
+  // Vertical if it contains at least one line starting with # that is not a comma-separated header
+  // (allow commas in value part; don't disqualify by comma presence)
+  for (const raw of blockLines) {
+    const t = raw.trim();
+    if (!t || t.startsWith("//")) continue;
+    if (!t.startsWith("#")) continue;
+
+    // Consider it vertical if it has whitespace after key OR key-only line
+    // (not just "#a,#b,#c")
+    if (!t.includes(",")) return true;
+
+    // If it includes commas but also contains whitespace between key and value, it's vertical
+    // e.g. "#RepeatingGroups    \"a, b\""
+    if (/^#\S+\s+/.test(t)) return true;
+  }
+  return false;
+}
+
+function convertBlockToVertical(blockLines: string[]): string[] {
+  const preserved: string[] = [];
+  let i = 0;
+
+  // Preserve leading lines until header (#...)
+  while (i < blockLines.length && !blockLines[i].trim().startsWith("#")) {
+    preserved.push(blockLines[i]);
+    i++;
+  }
+
+  if (i >= blockLines.length) return blockLines;
+
+  const header = blockLines[i];
+  const values = blockLines[i + 1];
+  if (values === undefined) return blockLines;
+
+  const keys = splitSimpleCsvLine(header);
+  const vals = splitSimpleCsvLine(values);
+
+  const maxLen = Math.max(keys.length, vals.length);
+  const SEP = "\t";
+
+  const rows: string[] = [];
+  for (let k = 0; k < maxLen; k++) {
+    rows.push(`${keys[k] ?? ""}${SEP}${vals[k] ?? ""}`);
+  }
+
+  return [...preserved, ...rows];
+}
+
+function convertBlockToHorizontal(blockLines: string[]): string[] {
+  const preserved: string[] = [];
+  const keys: string[] = [];
+  const values: string[] = [];
+
+  let pendingKey: string | null = null;
+
+  const flushPending = () => {
+    if (pendingKey !== null) {
+      keys.push(pendingKey);
+      values.push("");
+      pendingKey = null;
+    }
+  };
+
+  for (let idx = 0; idx < blockLines.length; idx++) {
+    const rawLine = blockLines[idx];
+    const trimmed = rawLine.trim();
+    if (!trimmed) continue;
+
+    if (trimmed.startsWith("//")) {
+      preserved.push(rawLine);
+      continue;
+    }
+
+    // If we are waiting for a value-only line
+    if (pendingKey !== null) {
+      if (trimmed.startsWith("#")) {
+        // next key arrives => previous key had empty value
+        keys.push(pendingKey);
+        values.push("");
+        pendingKey = null;
+        // fall through and process this key line
+      } else {
+        keys.push(pendingKey);
+        values.push(trimmed); // keep quotes etc
+        pendingKey = null;
+        continue;
+      }
+    }
+
+    if (trimmed.startsWith("#")) {
+      // "#Key    Value"
+      const m = trimmed.match(/^(\S+)\s+(.+)$/);
+      if (m) {
+        keys.push(m[1].trim());
+        values.push(m[2].trim());
+        continue;
+      }
+
+      // "#Key" alone
+      pendingKey = trimmed;
+      continue;
+    }
+
+    // Anything else preserved
+    preserved.push(rawLine);
+  }
+
+  flushPending();
+
+  if (keys.length === 0) return blockLines;
+
+  const headerLine = keys.join(",");
+  const valueLine = values.map(csvEncodeField).join(",");
+
+  const out: string[] = [];
+  if (preserved.length > 0) out.push(...preserved);
+  out.push(headerLine);
+  out.push(valueLine);
+  return out;
+}
+
+async function convertSelectedBlocks(direction: "toVertical" | "toHorizontal") {
+  const editor = vscode.window.activeTextEditor;
+  if (!editor) {
+    vscode.window.showErrorMessage("Rowtate: No active text editor.");
+    return;
+  }
+
+  const doc = editor.document;
+  const text = doc.getText();
+  const lines = text.split(/\r?\n/);
+
+  if (lines.every((l) => l.trim().length === 0)) {
+    vscode.window.showErrorMessage("Rowtate: Document is empty.");
+    return;
+  }
+
+  const segments = splitIntoSegments(lines);
+  const selectedSegIndexes = getSelectedBlockSegmentIndexes(editor, segments);
+
+  if (selectedSegIndexes.size === 0) {
+    vscode.window.showWarningMessage("Rowtate: No blocks selected.");
+    return;
+  }
+
+  const newLines: string[] = [];
+
+  for (let si = 0; si < segments.length; si++) {
+    const seg = segments[si];
+
+    if (seg.kind === "blank") {
+      newLines.push(...seg.lines);
+      continue;
+    }
+
+    // block
+    if (!selectedSegIndexes.has(si)) {
+      newLines.push(...seg.lines);
+      continue;
+    }
+
+    // Selected block: convert only if it's not already in the target mode
+    if (direction === "toVertical") {
+      if (isHorizontalBlock(seg.lines)) {
+        newLines.push(...convertBlockToVertical(seg.lines));
+      } else {
+        newLines.push(...seg.lines); // already vertical or unknown => unchanged
+      }
+    } else {
+      if (isVerticalBlock(seg.lines)) {
+        newLines.push(...convertBlockToHorizontal(seg.lines));
+      } else {
+        newLines.push(...seg.lines); // already horizontal or unknown => unchanged
+      }
+    }
+  }
+
+  // Preserve trailing newline like your other operations
+  const newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
+
+  const fullRange = new vscode.Range(
+    doc.positionAt(0),
+    doc.positionAt(text.length)
+  );
+
+  const edit = new vscode.WorkspaceEdit();
+  edit.replace(doc.uri, fullRange, newText);
+  await vscode.workspace.applyEdit(edit);
+  if (coloringEnabled) applyRowtateDecorations();
 }

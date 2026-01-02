@@ -24,6 +24,14 @@
       {
         "command": "rowtate.reorderVertical",
         "title": "Rowtate: Reorder Rows (Vertical Drag & Drop)"
+      },
+      {
+        "command": "rowtate.blocksToVertical",
+        "title": "Rowtate: Convert Selected Blocks to Vertical"
+      },
+      {
+        "command": "rowtate.blocksToHorizontal",
+        "title": "Rowtate: Convert Selected Blocks to Horizontal"
       }
     ]
   },
