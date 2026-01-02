@@ -445,18 +445,6 @@ async function toggleKeyValueLayout() {
     setTimeout(() => rowtateStatusItem.hide(), 2500);
   }
 }
-function looksLikeHorizontalCsv(lines) {
-  const blocks = splitIntoBlocks(lines);
-  for (const block of blocks) {
-    if (block.length < 2) continue;
-    const a = block[0].trim();
-    const b = block[1].trim();
-    const aCommas = (a.match(/,/g) || []).length;
-    const bCommas = (b.match(/,/g) || []).length;
-    if (aCommas >= 1 && bCommas >= 1) return true;
-  }
-  return false;
-}
 function toVertical(allLines) {
   const blocks = splitIntoBlocks(allLines);
   const outBlocks = [];
@@ -625,15 +613,20 @@ async function openReorderWebview() {
   const doc = editor.document;
   const text = doc.getText();
   const lines = text.split(/\r?\n/);
-  if (looksLikeHorizontalCsv(lines)) {
+  if (lines.every((l) => l.trim().length === 0)) {
+    vscode.window.showErrorMessage("Rowtate: Document is empty.");
+    return;
+  }
+  const model = buildVerticalReorderModel(lines);
+  if (model.verticalSegIndexes.length === 0) {
     vscode.window.showWarningMessage(
-      "Rowtate: Reordering is available only in vertical mode. Toggle to vertical first."
+      "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected)."
     );
     return;
   }
   const panel = vscode.window.createWebviewPanel(
     "rowtateReorder",
-    "Rowtate: Reorder Rows",
+    "Rowtate: Reorder Vertical Rows (Mixed Mode OK)",
     vscode.ViewColumn.Beside,
     {
       enableScripts: true,
@@ -641,12 +634,35 @@ async function openReorderWebview() {
     }
   );
   const colors = getRowtateColors();
-  panel.webview.html = getReorderWebviewHtml(panel.webview, lines, colors);
+  panel.webview.html = getReorderWebviewHtml(
+    panel.webview,
+    model.flatLines,
+    colors
+  );
   panel.webview.onDidReceiveMessage(async (msg) => {
     if (!msg || typeof msg.type !== "string") return;
     if (msg.type === "apply") {
-      const newLines = msg.lines;
-      if (!Array.isArray(newLines)) return;
+      const newFlat = msg.lines;
+      if (!Array.isArray(newFlat)) return;
+      if (newFlat.length !== model.flatLines.length) {
+        vscode.window.showErrorMessage(
+          "Rowtate: Reorder apply failed (line count mismatch)."
+        );
+        return;
+      }
+      const rebuiltSegments = model.segments.map((seg) => ({ ...seg }));
+      let cursor = 0;
+      for (let k = 0; k < model.verticalSegIndexes.length; k++) {
+        const segIdx = model.verticalSegIndexes[k];
+        const segLen = model.verticalSegLengths[k];
+        const slice = newFlat.slice(cursor, cursor + segLen);
+        cursor += segLen;
+        rebuiltSegments[segIdx].lines = slice;
+      }
+      const newLines = [];
+      for (const seg of rebuiltSegments) {
+        newLines.push(...seg.lines);
+      }
       const newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
       const fullRange = new vscode.Range(
         doc.positionAt(0),
@@ -656,12 +672,29 @@ async function openReorderWebview() {
       edit.replace(doc.uri, fullRange, newText);
       await vscode.workspace.applyEdit(edit);
       await doc.save();
+      if (coloringEnabled) applyRowtateDecorations();
       panel.dispose();
     }
     if (msg.type === "cancel") {
       panel.dispose();
     }
   });
+}
+function buildVerticalReorderModel(allLines) {
+  const segments = splitIntoSegments(allLines);
+  const verticalSegIndexes = [];
+  const verticalSegLengths = [];
+  const flatLines = [];
+  for (let i = 0; i < segments.length; i++) {
+    const seg = segments[i];
+    if (seg.kind !== "block") continue;
+    const isHoriz = isHorizontalBlock(seg.lines);
+    if (isHoriz) continue;
+    verticalSegIndexes.push(i);
+    verticalSegLengths.push(seg.lines.length);
+    flatLines.push(...seg.lines);
+  }
+  return { segments, verticalSegIndexes, verticalSegLengths, flatLines };
 }
 function getReorderWebviewHtml(webview, lines, colors) {
   const nonce = getNonce();
@@ -729,7 +762,9 @@ function getReorderWebviewHtml(webview, lines, colors) {
   <div class="toolbar">
     <button id="apply">Apply</button>
     <button id="cancel">Cancel</button>
-    <span class="hint">Drag rows to reorder. Blank lines and comments are draggable too.</span>
+    <span class="hint">
+      Drag rows to reorder. Only vertical blocks are shown, horizontal blocks are hidden and unchanged.
+    </span>
   </div>
 
   <div id="list" class="list"></div>
