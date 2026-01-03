@@ -1,5 +1,6 @@
 import * as vscode from "vscode";
 import { RowtateSidebarProvider } from "./webviews/sidebar/provider";
+
 import {
   rebuildDecorations,
   applyRowtateDecorations,

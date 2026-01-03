@@ -50,10 +50,11 @@ function getNonce() {
 }
 
 // src/webviews/sidebar/html.ts
-function getSidebarHtml(webview) {
+function getSidebarHtml(webview, opts) {
   const nonce = getNonce();
   const csp = `
     default-src 'none';
+    img-src ${webview.cspSource} data:;
     style-src ${webview.cspSource} 'unsafe-inline';
     script-src 'nonce-${nonce}';
   `.replace(/\s+/g, " ").trim();
@@ -67,13 +68,47 @@ function getSidebarHtml(webview) {
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body { padding: 10px; font-family: system-ui, sans-serif; }
-    .title { font-weight: 600; margin-bottom: 10px; }
+
+    .header {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      margin-bottom: 12px;
+      padding: 10px;
+      border: 1px solid #4444;
+      border-radius: 10px;
+      background: var(--vscode-editor-background);
+    }
+
+    .logo {
+      width: 64px;
+      height: 64px;
+      flex: 0 0 auto;
+      border-radius: 12px;
+      overflow: hidden;
+      background: #0b1020;
+      border: 1px solid #4444;
+      display: grid;
+      place-items: center;
+    }
+    .logo img {
+      width: 100%;
+      height: 100%;
+      display: block;
+      object-fit: cover;
+    }
+
+    .titleWrap { line-height: 1.1; }
+    .title { font-weight: 650; }
+    .subtitle { font-size: 12px; opacity: .75; margin-top: 2px; }
+
+    .cmd { margin: 6px 0 10px; }
 
     .btn {
       width: 100%;
       text-align: left;
       padding: 8px 10px;
-      margin: 6px 0;
+      margin: 0;
       border-radius: 8px;
       border: 1px solid #4444;
       background: var(--vscode-button-secondaryBackground);
@@ -104,31 +139,102 @@ function getSidebarHtml(webview) {
       35%  { box-shadow: 0 0 0 3px rgba(122,90,18,0.55); filter: brightness(1.12); }
       100% { box-shadow: 0 0 0 0 rgba(122,90,18,0.0); filter: brightness(1.0); }
     }
-    .btn.pulse {
-      animation: pulseRing 320ms ease-out;
+    .btn.pulse { animation: pulseRing 320ms ease-out; }
+    .btn:focus-visible { box-shadow: 0 0 0 2px #7a5a12aa; }
+
+    .sub {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+      margin: 4px 2px 0;
+      font-size: 12px;
+      opacity: .95;
+      user-select: none;
+      flex-wrap: wrap;
     }
 
-    .btn:focus-visible { box-shadow: 0 0 0 2px #7a5a12aa; }
+    .sub a {
+      color: #7fb7ff;
+      text-decoration: none;
+      cursor: pointer;
+    }
+    .sub a:hover { text-decoration: underline; }
+
+    .dot { opacity: .5; }
 
     .hint { font-size: 12px; opacity: .75; margin-top: 10px; }
     .sep { margin: 10px 0; border-top: 1px solid #4444; }
   </style>
 </head>
+
 <body>
-  <div class="title">Rowtate</div>
+  <div class="header">
+    <div class="logo" aria-label="Rowtate logo">
+      <img src="${opts.logoUri}" alt="Rowtate animated logo" />
+    </div>
+    <div class="titleWrap">
+      <div class="title">Rowtate</div>
+      <div class="subtitle">Quick CSV row \u2194 key/value tools</div>
+    </div>
+  </div>
 
-  <button class="btn" data-cmd="rowtate.toggle">Toggle Key/Value Layout</button>
-  <button class="btn" data-cmd="rowtate.toggleColoring">Toggle Coloring</button>
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggle">Toggle Key/Value Layout</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggle">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.toggle">Copy command id</a>
+    </div>
+  </div>
+
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggleColoring">Toggle Colouring</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggleColoring">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.toggleColoring">Copy command id</a>
+    </div>
+  </div>
 
   <div class="sep"></div>
 
-  <button class="btn" data-cmd="rowtate.blocksToVertical">Selection \u2192 Vertical</button>
-  <button class="btn" data-cmd="rowtate.blocksToHorizontal">Selection \u2192 Horizontal</button>
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.blocksToVertical">Selection \u2192 Vertical</button>
+    <div class="sub">
+      <a data-bind="rowtate.blocksToVertical">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.blocksToVertical">Copy command id</a>
+    </div>
+  </div>
+
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.blocksToHorizontal">Selection \u2192 Horizontal</button>
+    <div class="sub">
+      <a data-bind="rowtate.blocksToHorizontal">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.blocksToHorizontal">Copy command id</a>
+    </div>
+  </div>
 
   <div class="sep"></div>
 
-  <button class="btn" data-cmd="rowtate.reorderVertical">Reorder (Vertical rows)</button>
-  <button class="btn" data-cmd="rowtate.pickColors">Pick Colors</button>
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.reorderVertical">Reorder (Vertical rows)</button>
+    <div class="sub">
+      <a data-bind="rowtate.reorderVertical">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.reorderVertical">Copy command id</a>
+    </div>
+  </div>
+
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.pickColors">Pick Colours</button>
+    <div class="sub">
+      <a data-bind="rowtate.pickColors">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.pickColors">Copy command id</a>
+    </div>
+  </div>
 
   <div class="hint">
     Tip: selection commands act on block(s) under your cursor/selection.
@@ -136,7 +242,10 @@ function getSidebarHtml(webview) {
 
   <script nonce="${nonce}">
     const vscode = acquireVsCodeApi();
+
     const buttons = Array.from(document.querySelectorAll("button[data-cmd]"));
+    const bindLinks = Array.from(document.querySelectorAll("[data-bind]"));
+    const copyLinks = Array.from(document.querySelectorAll("[data-copy]"));
 
     let busy = false;
     let pendingRequestId = null;
@@ -156,6 +265,12 @@ function getSidebarHtml(webview) {
     function setBusy(on) {
       busy = on;
       buttons.forEach(b => b.disabled = on);
+
+      bindLinks.forEach(a => a.style.pointerEvents = on ? "none" : "auto");
+      bindLinks.forEach(a => a.style.opacity = on ? "0.55" : "1");
+
+      copyLinks.forEach(a => a.style.pointerEvents = on ? "none" : "auto");
+      copyLinks.forEach(a => a.style.opacity = on ? "0.55" : "1");
     }
 
     function makeRequestId() {
@@ -178,6 +293,24 @@ function getSidebarHtml(webview) {
           command: btn.getAttribute("data-cmd"),
           requestId: pendingRequestId
         });
+      });
+    });
+
+    bindLinks.forEach(a => {
+      a.addEventListener("click", (e) => {
+        e.preventDefault();
+        if (busy) return;
+        vscode.postMessage({ type: "bind", command: a.getAttribute("data-bind") });
+      });
+    });
+
+    copyLinks.forEach(a => {
+      a.addEventListener("click", async (e) => {
+        e.preventDefault();
+        if (busy) return;
+        const cmd = a.getAttribute("data-copy");
+        try { await navigator.clipboard.writeText(cmd); } catch {}
+        vscode.postMessage({ type: "copied", command: cmd });
       });
     });
 
@@ -206,23 +339,24 @@ var RowtateSidebarProvider = class {
     this.extensionUri = extensionUri;
   }
   resolveWebviewView(webviewView) {
-    webviewView.webview.options = {
-      enableScripts: true
+    const webview = webviewView.webview;
+    webview.options = {
+      enableScripts: true,
+      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")]
     };
-    webviewView.webview.html = getSidebarHtml(webviewView.webview);
-    webviewView.webview.onDidReceiveMessage(async (msg) => {
+    const gifUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, "media", "rowtate-anim.gif")
+    );
+    webview.html = getSidebarHtml(webview, { logoUri: String(gifUri) });
+    webview.onDidReceiveMessage(async (msg) => {
       if (!msg || typeof msg.type !== "string") return;
       if (msg.type === "cmd" && typeof msg.command === "string") {
         const requestId = typeof msg.requestId === "string" ? msg.requestId : "";
         try {
           await vscode.commands.executeCommand(msg.command);
-          webviewView.webview.postMessage({
-            type: "done",
-            requestId,
-            ok: true
-          });
+          webview.postMessage({ type: "done", requestId, ok: true });
         } catch (e) {
-          webviewView.webview.postMessage({
+          webview.postMessage({
             type: "done",
             requestId,
             ok: false,
@@ -232,6 +366,19 @@ var RowtateSidebarProvider = class {
             `Rowtate: Failed to run ${msg.command}: ${String(e)}`
           );
         }
+        return;
+      }
+      if (msg.type === "bind" && typeof msg.command === "string") {
+        await vscode.commands.executeCommand(
+          "workbench.action.openGlobalKeybindings"
+        );
+        vscode.window.showInformationMessage(
+          `Keyboard Shortcuts opened. Search for: ${msg.command} (or "Rowtate") to assign a keybinding.`
+        );
+        return;
+      }
+      if (msg.type === "copied" && typeof msg.command === "string") {
+        vscode.window.showInformationMessage(`Copied: ${msg.command}`);
       }
     });
   }
@@ -1234,7 +1381,7 @@ async function openReorderWebview() {
     return;
   }
   const model = buildVerticalReorderModel(lines);
-  if (model.verticalSegIndexes.length === 0) {
+  if (!model.includedSegIndexes.some((i) => model.segments[i]?.kind === "block")) {
     vscode8.window.showWarningMessage(
       "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected)."
     );
@@ -1268,9 +1415,9 @@ async function openReorderWebview() {
       }
       const rebuiltSegments = model.segments.map((seg) => ({ ...seg }));
       let cursor = 0;
-      for (let k = 0; k < model.verticalSegIndexes.length; k++) {
-        const segIdx = model.verticalSegIndexes[k];
-        const segLen = model.verticalSegLengths[k];
+      for (let k = 0; k < model.includedSegIndexes.length; k++) {
+        const segIdx = model.includedSegIndexes[k];
+        const segLen = model.includedSegLengths[k];
         const slice = newFlat.slice(cursor, cursor + segLen);
         cursor += segLen;
         rebuiltSegments[segIdx].lines = slice;
@@ -1298,19 +1445,31 @@ async function openReorderWebview() {
 }
 function buildVerticalReorderModel(allLines) {
   const segments = splitIntoSegments(allLines);
-  const verticalSegIndexes = [];
-  const verticalSegLengths = [];
+  const includedSegIndexes = [];
+  const includedSegLengths = [];
   const flatLines = [];
+  const isReorderableBlock = (seg) => seg.kind === "block" && !isHorizontalBlock(seg.lines);
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
-    if (seg.kind !== "block") continue;
-    const isHoriz = isHorizontalBlock(seg.lines);
-    if (isHoriz) continue;
-    verticalSegIndexes.push(i);
-    verticalSegLengths.push(seg.lines.length);
-    flatLines.push(...seg.lines);
+    if (isReorderableBlock(seg)) {
+      includedSegIndexes.push(i);
+      includedSegLengths.push(seg.lines.length);
+      flatLines.push(...seg.lines);
+      continue;
+    }
+    if (seg.kind === "blank") {
+      const prev = segments[i - 1];
+      const next = segments[i + 1];
+      const prevIsVert = prev ? isReorderableBlock(prev) : false;
+      const nextIsVert = next ? isReorderableBlock(next) : false;
+      if (prevIsVert && nextIsVert) {
+        includedSegIndexes.push(i);
+        includedSegLengths.push(seg.lines.length);
+        flatLines.push(...seg.lines);
+      }
+    }
   }
-  return { segments, verticalSegIndexes, verticalSegLengths, flatLines };
+  return { segments, includedSegIndexes, includedSegLengths, flatLines };
 }
 
 // src/commands/index.ts

@@ -25,7 +25,9 @@ async function openReorderWebview() {
   // Build model: only vertical blocks become reorderable content
   const model = buildVerticalReorderModel(lines);
 
-  if (model.verticalSegIndexes.length === 0) {
+  if (
+    !model.includedSegIndexes.some((i) => model.segments[i]?.kind === "block")
+  ) {
     vscode.window.showWarningMessage(
       "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected)."
     );
@@ -71,9 +73,9 @@ async function openReorderWebview() {
       const rebuiltSegments = model.segments.map((seg) => ({ ...seg }));
 
       let cursor = 0;
-      for (let k = 0; k < model.verticalSegIndexes.length; k++) {
-        const segIdx = model.verticalSegIndexes[k];
-        const segLen = model.verticalSegLengths[k];
+      for (let k = 0; k < model.includedSegIndexes.length; k++) {
+        const segIdx = model.includedSegIndexes[k];
+        const segLen = model.includedSegLengths[k];
 
         const slice = newFlat.slice(cursor, cursor + segLen);
         cursor += segLen;
@@ -108,34 +110,49 @@ async function openReorderWebview() {
     }
   });
 }
-
 function buildVerticalReorderModel(allLines: string[]): {
   segments: Segment[];
-  verticalSegIndexes: number[];
-  verticalSegLengths: number[];
-  flatLines: string[];
+  includedSegIndexes: number[]; // segments shown in the webview (vertical blocks + in-between blanks)
+  includedSegLengths: number[]; // lengths for slicing back
+  flatLines: string[]; // what webview edits/reorders
 } {
   const segments = splitIntoSegments(allLines);
 
-  const verticalSegIndexes: number[] = [];
-  const verticalSegLengths: number[] = [];
+  const includedSegIndexes: number[] = [];
+  const includedSegLengths: number[] = [];
   const flatLines: string[] = [];
+
+  // Helper: is this a vertical-ish block we allow reordering?
+  const isReorderableBlock = (seg: Segment) =>
+    seg.kind === "block" && !isHorizontalBlock(seg.lines);
 
   for (let i = 0; i < segments.length; i++) {
     const seg = segments[i];
 
-    if (seg.kind !== "block") continue;
+    // 1) Include vertical-ish blocks
+    if (isReorderableBlock(seg)) {
+      includedSegIndexes.push(i);
+      includedSegLengths.push(seg.lines.length);
+      flatLines.push(...seg.lines);
+      continue;
+    }
 
-    // Reorderable if it is NOT horizontal (treat unknown as vertical-ish)
-    // If you want stricter: use isVerticalBlock(seg.lines) instead.
-    const isHoriz = isHorizontalBlock(seg.lines);
-    if (isHoriz) continue;
+    // 2) Include BLANK segments only when they are BETWEEN two reorderable vertical blocks
+    if (seg.kind === "blank") {
+      const prev = segments[i - 1];
+      const next = segments[i + 1];
 
-    verticalSegIndexes.push(i);
-    verticalSegLengths.push(seg.lines.length);
-    flatLines.push(...seg.lines);
+      const prevIsVert = prev ? isReorderableBlock(prev) : false;
+      const nextIsVert = next ? isReorderableBlock(next) : false;
+
+      if (prevIsVert && nextIsVert) {
+        includedSegIndexes.push(i);
+        includedSegLengths.push(seg.lines.length);
+        flatLines.push(...seg.lines);
+      }
+    }
   }
 
-  return { segments, verticalSegIndexes, verticalSegLengths, flatLines };
+  return { segments, includedSegIndexes, includedSegLengths, flatLines };
 }
 export { openReorderWebview };
