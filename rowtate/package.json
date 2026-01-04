@@ -1,13 +1,24 @@
 {
   "name": "rowtate",
-  "displayName": "rowtate",
+  "displayName": "Rowtate",
   "description": "Transpose long rows in CSV files for easier key-value editing",
   "version": "0.0.1",
+  "publisher": "soraki",
+  "license": "MIT",
+  "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.106.1"
   },
   "categories": [
     "Other"
+  ],
+  "keywords": [
+    "csv",
+    "transpose",
+    "key-value",
+    "data",
+    "editor",
+    "table"
   ],
   "activationEvents": [
     "onView:rowtate.sidebar"
@@ -58,6 +69,32 @@
         }
       ]
     },
+    "commands": [
+      {
+        "command": "rowtate.toggle",
+        "title": "Rowtate: Toggle Key/Value Layout"
+      },
+      {
+        "command": "rowtate.toggleColoring",
+        "title": "Rowtate: Toggle Coloring"
+      },
+      {
+        "command": "rowtate.reorderVertical",
+        "title": "Rowtate: Reorder Rows (Vertical Drag & Drop)"
+      },
+      {
+        "command": "rowtate.blocksToVertical",
+        "title": "Rowtate: Convert Selected Blocks to Vertical"
+      },
+      {
+        "command": "rowtate.blocksToHorizontal",
+        "title": "Rowtate: Convert Selected Blocks to Horizontal"
+      },
+      {
+        "command": "rowtate.pickColors",
+        "title": "Rowtate: Pick Colors"
+      }
+    ],
     "configuration": {
       "title": "Rowtate",
       "properties": {
@@ -86,33 +123,7 @@
           "description": "Where Rowtate saves picked colors."
         }
       }
-    },
-    "commands": [
-      {
-        "command": "rowtate.toggle",
-        "title": "Rowtate: Toggle Key/Value Layout"
-      },
-      {
-        "command": "rowtate.toggleColoring",
-        "title": "Rowtate: Toggle Coloring"
-      },
-      {
-        "command": "rowtate.reorderVertical",
-        "title": "Rowtate: Reorder Rows (Vertical Drag & Drop)"
-      },
-      {
-        "command": "rowtate.blocksToVertical",
-        "title": "Rowtate: Convert Selected Blocks to Vertical"
-      },
-      {
-        "command": "rowtate.blocksToHorizontal",
-        "title": "Rowtate: Convert Selected Blocks to Horizontal"
-      },
-      {
-        "command": "rowtate.pickColors",
-        "title": "Rowtate: Pick Colors"
-      }
-    ]
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run package",

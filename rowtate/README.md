@@ -1,71 +1,56 @@
-# rowtate README
+Rowtate
 
-This is the README for your extension "rowtate". After writing up a brief description, we recommend including the following sections.
+Rowtate helps you quickly switch between horizontal CSV rows and vertical key–value layouts for easier editing, review, and reordering.
 
-## Features
+It’s especially useful for long CSV-style rows, message definitions, or structured test data.
 
-Describe specific features of your extension including screenshots of your extension in action. Image paths are relative to this README file.
+✨ Features
 
-For example if there is an image subfolder under your extension project workspace:
+🔁 Toggle between row and key/value layouts
 
-\!\[feature X\]\(images/feature-x.png\)
+🎯 Convert entire files or selected blocks
 
-> Tip: Many popular extensions utilize animations. This is an excellent way to show off your extension! We recommend short, focused animations that are easy to follow.
+🧩 Supports mixed layouts in the same file
 
-## Requirements
+🎨 Optional coloring for comments, keys, and values
 
-If you have any requirements or dependencies, add a section describing those and how to install and configure them.
+🖱 Drag & drop reordering of vertical rows
 
-## Extension Settings
+🧭 Sidebar with quick-access controls
 
-Include if your extension adds any VS Code settings through the `contributes.configuration` extension point.
+🚀 Getting Started
 
-For example:
+Open a file containing CSV-like rows or key/value blocks
 
-This extension contributes the following settings:
+Open Rowtate from the Activity Bar
 
-* `myExtension.enable`: Enable/disable this extension.
-* `myExtension.thing`: Set to `blah` to do something.
+Use Toggle Key/Value Layout or selection-based commands
 
-## Known Issues
+Keyboard shortcuts are included and can be customized in VS Code.
 
-Calling out known issues can help limit users opening duplicate issues against your extension.
+⚙️ Commands
 
-## Release Notes
+Rowtate: Toggle Key/Value Layout
 
-Users appreciate release notes as you update your extension.
+Rowtate: Convert Selected Blocks to Vertical
 
-### 1.0.0
+Rowtate: Convert Selected Blocks to Horizontal
 
-Initial release of ...
+Rowtate: Reorder Rows (Vertical)
 
-### 1.0.1
+Rowtate: Toggle Coloring
 
-Fixed issue #.
+🎯 Ideal Use Cases
 
-### 1.1.0
+Editing long CSV rows
 
-Added features X, Y, and Z.
+Message / protocol definitions
 
----
+Test data & fixtures
 
-## Following extension guidelines
+Any format where rows ↔ key/value views are useful
 
-Ensure that you've read through the extensions guidelines and follow the best practices for creating your extension.
+🧩 Notes
 
-* [Extension Guidelines](https://code.visualstudio.com/api/references/extension-guidelines)
-
-## Working with Markdown
-
-You can author your README using Visual Studio Code. Here are some useful editor keyboard shortcuts:
-
-* Split the editor (`Cmd+\` on macOS or `Ctrl+\` on Windows and Linux).
-* Toggle preview (`Shift+Cmd+V` on macOS or `Shift+Ctrl+V` on Windows and Linux).
-* Press `Ctrl+Space` (Windows, Linux, macOS) to see a list of Markdown snippets.
-
-## For more information
-
-* [Visual Studio Code's Markdown Support](http://code.visualstudio.com/docs/languages/markdown)
-* [Markdown Syntax Reference](https://help.github.com/articles/markdown-basics/)
-
-**Enjoy!**
+Rowtate is text-based and does not require strict CSV formatting.
+Comments and blank lines are preserved.

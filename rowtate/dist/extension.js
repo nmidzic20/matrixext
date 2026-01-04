@@ -1,70 +1,13 @@
-"use strict";
-var __create = Object.create;
-var __defProp = Object.defineProperty;
-var __getOwnPropDesc = Object.getOwnPropertyDescriptor;
-var __getOwnPropNames = Object.getOwnPropertyNames;
-var __getProtoOf = Object.getPrototypeOf;
-var __hasOwnProp = Object.prototype.hasOwnProperty;
-var __export = (target, all) => {
-  for (var name in all)
-    __defProp(target, name, { get: all[name], enumerable: true });
-};
-var __copyProps = (to, from, except, desc) => {
-  if (from && typeof from === "object" || typeof from === "function") {
-    for (let key of __getOwnPropNames(from))
-      if (!__hasOwnProp.call(to, key) && key !== except)
-        __defProp(to, key, { get: () => from[key], enumerable: !(desc = __getOwnPropDesc(from, key)) || desc.enumerable });
-  }
-  return to;
-};
-var __toESM = (mod, isNodeMode, target) => (target = mod != null ? __create(__getProtoOf(mod)) : {}, __copyProps(
-  // If the importer is in node compatibility mode or this is not an ESM
-  // file that has been converted to a CommonJS file using a Babel-
-  // compatible transform (i.e. "__esModule" has not been set), then set
-  // "default" to the CommonJS "module.exports" for node compatibility.
-  isNodeMode || !mod || !mod.__esModule ? __defProp(target, "default", { value: mod, enumerable: true }) : target,
-  mod
-));
-var __toCommonJS = (mod) => __copyProps(__defProp({}, "__esModule", { value: true }), mod);
-
-// src/extension.ts
-var extension_exports = {};
-__export(extension_exports, {
-  activate: () => activate,
-  deactivate: () => deactivate
-});
-module.exports = __toCommonJS(extension_exports);
-var vscode10 = __toESM(require("vscode"));
-
-// src/webviews/sidebar/provider.ts
-var vscode = __toESM(require("vscode"));
-
-// src/utils/nonce.ts
-function getNonce() {
-  const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
-  let nonce = "";
-  for (let i = 0; i < 32; i++) {
-    nonce += chars.charAt(Math.floor(Math.random() * chars.length));
-  }
-  return nonce;
-}
-
-// src/webviews/sidebar/html.ts
-function getSidebarHtml(webview, opts) {
-  const nonce = getNonce();
-  const csp = `
-    default-src 'none';
-    img-src ${webview.cspSource} data:;
-    style-src ${webview.cspSource} 'unsafe-inline';
-    script-src 'nonce-${nonce}';
-  `.replace(/\s+/g, " ").trim();
-  return (
-    /* html */
-    `<!DOCTYPE html>
+"use strict";var ie=Object.create;var W=Object.defineProperty;var re=Object.getOwnPropertyDescriptor;var ae=Object.getOwnPropertyNames;var ce=Object.getPrototypeOf,de=Object.prototype.hasOwnProperty;var le=(e,n)=>{for(var t in n)W(e,t,{get:n[t],enumerable:!0})},q=(e,n,t,s)=>{if(n&&typeof n=="object"||typeof n=="function")for(let o of ae(n))!de.call(e,o)&&o!==t&&W(e,o,{get:()=>n[o],enumerable:!(s=re(n,o))||s.enumerable});return e};var x=(e,n,t)=>(t=e!=null?ie(ce(e)):{},q(n||!e||!e.__esModule?W(t,"default",{value:e,enumerable:!0}):t,e)),pe=e=>q(W({},"__esModule",{value:!0}),e);var ye={};le(ye,{activate:()=>we,deactivate:()=>he});module.exports=pe(ye);var T=x(require("vscode"));var k=x(require("vscode"));function L(){let e="ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789",n="";for(let t=0;t<32;t++)n+=e.charAt(Math.floor(Math.random()*e.length));return n}function j(e,n){let t=L();return`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
+  <meta http-equiv="Content-Security-Policy" content="${`
+    default-src 'none';
+    img-src ${e.cspSource} data:;
+    style-src ${e.cspSource} 'unsafe-inline';
+    script-src 'nonce-${t}';
+  `.replace(/\s+/g," ").trim()}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <style>
     body { padding: 10px; font-family: system-ui, sans-serif; }
@@ -170,7 +113,7 @@ function getSidebarHtml(webview, opts) {
 <body>
   <div class="header">
     <div class="logo" aria-label="Rowtate logo">
-      <img src="${opts.logoUri}" alt="Rowtate animated logo" />
+      <img src="${n.logoUri}" alt="Rowtate animated logo" />
     </div>
     <div class="titleWrap">
       <div class="title">Rowtate</div>
@@ -240,7 +183,7 @@ function getSidebarHtml(webview, opts) {
     Tip: selection commands act on block(s) under your cursor/selection.
   </div>
 
-  <script nonce="${nonce}">
+  <script nonce="${t}">
     const vscode = acquireVsCodeApi();
 
     const buttons = Array.from(document.querySelectorAll("button[data-cmd]"));
@@ -329,666 +272,32 @@ function getSidebarHtml(webview, opts) {
     });
   </script>
 </body>
-</html>`
-  );
-}
+</html>`}var $=class{constructor(n){this.extensionUri=n}resolveWebviewView(n){let t=n.webview;t.options={enableScripts:!0,localResourceRoots:[k.Uri.joinPath(this.extensionUri,"media")]};let s=t.asWebviewUri(k.Uri.joinPath(this.extensionUri,"media","rowtate-anim.gif"));t.html=j(t,{logoUri:String(s)}),t.onDidReceiveMessage(async o=>{if(!(!o||typeof o.type!="string")){if(o.type==="cmd"&&typeof o.command=="string"){let i=typeof o.requestId=="string"?o.requestId:"";try{await k.commands.executeCommand(o.command),t.postMessage({type:"done",requestId:i,ok:!0})}catch(r){t.postMessage({type:"done",requestId:i,ok:!1,error:String(r)}),k.window.showErrorMessage(`Rowtate: Failed to run ${o.command}: ${String(r)}`)}return}if(o.type==="bind"&&typeof o.command=="string"){await k.commands.executeCommand("workbench.action.openGlobalKeybindings"),k.window.showInformationMessage(`Keyboard Shortcuts opened. Search for: ${o.command} (or "Rowtate") to assign a keybinding.`);return}o.type==="copied"&&typeof o.command=="string"&&k.window.showInformationMessage(`Copied: ${o.command}`)}})}};var w=x(require("vscode"));var U=x(require("vscode"));function D(){let e=U.workspace.getConfiguration("rowtate");return{comment:e.get("colors.comment","#87c66b"),key:e.get("colors.key","#cd6060ff"),value:e.get("colors.value","#6aa2f7ff"),target:e.get("colors.target","user")}}function E(e){let n=[],t=0;for(;t<e.length;){let s=t,o=e[t].trim()==="",i=[];for(;t<e.length&&e[t].trim()===""===o;)i.push(e[t]),t++;let r=t-1;n.push({kind:o?"blank":"block",lines:i,startLine:s,endLine:r})}return n}function F(e){let n=[],t=[];for(let s of e)s.trim()===""?t.length>0&&(n.push(t),t=[]):t.push(s);return t.length>0&&n.push(t),n}function C(e){let n=e.map(r=>r.trim()).filter(r=>r.length>0&&!r.startsWith("//"));if(n.length<2)return!1;let t=n[0],s=n[1];if(!t.startsWith("#")||!t.includes(","))return!1;let o=(t.match(/,/g)||[]).length,i=(s.match(/,/g)||[]).length;return o>=1&&i>=1}function A(e){for(let n of e){let t=n.trim();if(!(!t||t.startsWith("//"))&&t.startsWith("#")&&(!t.includes(",")||/^#\S+\s+/.test(t)))return!0}return!1}function K(e){let n=E(e),t=0,s=0;for(let o of n)o.kind==="block"&&(C(o.lines)?t++:(A(o.lines),s++));return t>0&&s>0?"mixed":t>0?"horizontal":"vertical"}var d={coloringEnabled:!1,commentDeco:void 0,keyDeco:void 0,valueDeco:void 0,statusItem:void 0};function B(e){d.commentDeco?.dispose(),d.keyDeco?.dispose(),d.valueDeco?.dispose();let n=D();d.commentDeco=w.window.createTextEditorDecorationType({color:n.comment}),d.keyDeco=w.window.createTextEditorDecorationType({color:n.key}),d.valueDeco=w.window.createTextEditorDecorationType({color:n.value}),e.subscriptions.push(d.commentDeco,d.keyDeco,d.valueDeco)}function g(){let e=w.window.activeTextEditor;if(!e)return;let s=e.document.getText().split(/\r?\n/),o=[],i=[],r=[];for(let c=0;c<s.length;c++){let l=s[c];l.trim().startsWith("//")&&o.push(new w.Range(new w.Position(c,0),new w.Position(c,l.length)))}let a=E(s);for(let c of a)c.kind==="block"&&(C(c.lines)?me(c,i,r):ue(c,i,r));e.setDecorations(d.commentDeco,o),e.setDecorations(d.keyDeco,i),e.setDecorations(d.valueDeco,r)}function ue(e,n,t){for(let s=0;s<e.lines.length;s++){let o=e.startLine+s,i=e.lines[s],r=i.trim();if(!r.startsWith("#")||r.startsWith("//"))continue;let a=r.match(/^(\S+)(\s+)(.*)$/)||r.match(/^(\S+)$/);if(!a)continue;let c=a[1],l=a[2]??"",p=i.indexOf(c);if(p<0)continue;let u=p+c.length;if(n.push(new w.Range(o,p,o,u)),l){let m=u+l.length,v=i.length;m<=v&&t.push(new w.Range(o,m,o,v))}}}function me(e,n,t){let s=e.lines.map(c=>c.trim()),o=-1;for(let c=0;c<s.length;c++)if(!(s[c]===""||s[c].startsWith("//"))){o=c;break}if(o<0)return;let i=-1;for(let c=o+1;c<s.length;c++)if(!(s[c]===""||s[c].startsWith("//"))){i=c;break}if(i<0)return;let r=e.startLine+o,a=e.startLine+i;n.push(new w.Range(r,0,r,e.lines[o].length)),t.push(new w.Range(a,0,a,e.lines[i].length))}var I=x(require("vscode"));var S=x(require("vscode"));function P(e){let n=[],t="",s=!1;for(let o=0;o<e.length;o++){let i=e[o];if(i===","&&!s){n.push(O(t)),t="";continue}if(i==='"'){let r=e[o+1];if(s&&r==='"'){t+='""',o++;continue}s=!s,t+='"';continue}if(i==="\\"&&s){let r=e[o+1];if(r==='"'||r==="\\"){t+="\\"+r,o++;continue}}t+=i}return n.push(O(t)),n}function O(e){return e.trim()}function z(e){if(e==="")return"";let n=e.trim();return n.length>=2&&n.startsWith('"')&&n.endsWith('"')?n:/[",\r\n]/.test(e)||e!==e.trim()?`"${e.replace(/"/g,'""')}"`:e}function G(e){let n=F(e),t=[];for(let s of n){let o=[],i=0;for(;i<s.length&&!s[i].trim().startsWith("#");)o.push(s[i]),i++;if(i>=s.length){t.push(s.join(`
+`));continue}let r=s[i],a=s[i+1];if(a===void 0){t.push(s.join(`
+`));continue}let c=P(r),l=P(a),p=Math.max(c.length,l.length),u="	",m=[];for(let y=0;y<p;y++)m.push(`${c[y]??""}${u}${l[y]??""}`);let v=[...o,...m].join(`
+`);t.push(v)}return t.join(`
 
-// src/webviews/sidebar/provider.ts
-var RowtateSidebarProvider = class {
-  constructor(extensionUri) {
-    this.extensionUri = extensionUri;
-  }
-  resolveWebviewView(webviewView) {
-    const webview = webviewView.webview;
-    webview.options = {
-      enableScripts: true,
-      localResourceRoots: [vscode.Uri.joinPath(this.extensionUri, "media")]
-    };
-    const gifUri = webview.asWebviewUri(
-      vscode.Uri.joinPath(this.extensionUri, "media", "rowtate-anim.gif")
-    );
-    webview.html = getSidebarHtml(webview, { logoUri: String(gifUri) });
-    webview.onDidReceiveMessage(async (msg) => {
-      if (!msg || typeof msg.type !== "string") return;
-      if (msg.type === "cmd" && typeof msg.command === "string") {
-        const requestId = typeof msg.requestId === "string" ? msg.requestId : "";
-        try {
-          await vscode.commands.executeCommand(msg.command);
-          webview.postMessage({ type: "done", requestId, ok: true });
-        } catch (e) {
-          webview.postMessage({
-            type: "done",
-            requestId,
-            ok: false,
-            error: String(e)
-          });
-          vscode.window.showErrorMessage(
-            `Rowtate: Failed to run ${msg.command}: ${String(e)}`
-          );
-        }
-        return;
-      }
-      if (msg.type === "bind" && typeof msg.command === "string") {
-        await vscode.commands.executeCommand(
-          "workbench.action.openGlobalKeybindings"
-        );
-        vscode.window.showInformationMessage(
-          `Keyboard Shortcuts opened. Search for: ${msg.command} (or "Rowtate") to assign a keybinding.`
-        );
-        return;
-      }
-      if (msg.type === "copied" && typeof msg.command === "string") {
-        vscode.window.showInformationMessage(`Copied: ${msg.command}`);
-      }
-    });
-  }
-};
+`)+`
+`}function Q(e){let n=F(e),t=[];for(let s of n){let o=[],i=[],r=[],a=null,c=()=>{a!==null&&(i.push(a),r.push(""),a=null)};for(let u=0;u<s.length;u++){let m=s[u],v=m.trim();if(v){if(v.startsWith("//")){o.push(m);continue}if(a!==null)if(v.startsWith("#"))i.push(a),r.push(""),a=null;else{i.push(a),r.push(v),a=null;continue}if(v.startsWith("#")){let y=v.match(/^(\S+)\s+(.+)$/);if(y){i.push(y[1].trim()),r.push(y[2].trim());continue}a=v;continue}o.push(m)}}if(c(),i.length===0){t.push(s.join(`
+`));continue}let l=`${i.join(",")}
+${r.map(z).join(",")}`,p=o.length>0?`${o.join(`
+`)}
+${l}`:l;t.push(p)}return t.join(`
 
-// src/decorations/index.ts
-var vscode3 = __toESM(require("vscode"));
-
-// src/decorations/colours.ts
-var vscode2 = __toESM(require("vscode"));
-function getRowtateColors() {
-  const cfg = vscode2.workspace.getConfiguration("rowtate");
-  return {
-    comment: cfg.get("colors.comment", "#87c66b"),
-    key: cfg.get("colors.key", "#cd6060ff"),
-    value: cfg.get("colors.value", "#6aa2f7ff"),
-    target: cfg.get("colors.target", "user")
-  };
-}
-
-// src/core/segment.ts
-function splitIntoSegments(lines) {
-  const segs = [];
-  let i = 0;
-  while (i < lines.length) {
-    const start = i;
-    const isBlank = lines[i].trim() === "";
-    const buf = [];
-    while (i < lines.length && lines[i].trim() === "" === isBlank) {
-      buf.push(lines[i]);
-      i++;
-    }
-    const end = i - 1;
-    segs.push({
-      kind: isBlank ? "blank" : "block",
-      lines: buf,
-      startLine: start,
-      endLine: end
-    });
-  }
-  return segs;
-}
-function splitIntoBlocks(lines) {
-  const blocks = [];
-  let current = [];
-  for (const line of lines) {
-    if (line.trim() === "") {
-      if (current.length > 0) {
-        blocks.push(current);
-        current = [];
-      }
-    } else {
-      current.push(line);
-    }
-  }
-  if (current.length > 0) blocks.push(current);
-  return blocks;
-}
-
-// src/core/detect.ts
-function isHorizontalBlock(blockLines) {
-  const content = blockLines.map((l) => l.trim()).filter((l) => l.length > 0 && !l.startsWith("//"));
-  if (content.length < 2) return false;
-  const header = content[0];
-  const values = content[1];
-  if (!header.startsWith("#") || !header.includes(",")) return false;
-  const headerCommas = (header.match(/,/g) || []).length;
-  const valueCommas = (values.match(/,/g) || []).length;
-  return headerCommas >= 1 && valueCommas >= 1;
-}
-function isVerticalBlock(blockLines) {
-  for (const raw of blockLines) {
-    const t = raw.trim();
-    if (!t || t.startsWith("//")) continue;
-    if (!t.startsWith("#")) continue;
-    if (!t.includes(",")) return true;
-    if (/^#\S+\s+/.test(t)) return true;
-  }
-  return false;
-}
-function detectFileMode(lines) {
-  const segments = splitIntoSegments(lines);
-  let h = 0;
-  let v = 0;
-  for (const seg of segments) {
-    if (seg.kind !== "block") continue;
-    if (isHorizontalBlock(seg.lines)) h++;
-    else if (isVerticalBlock(seg.lines)) v++;
-    else {
-      v++;
-    }
-  }
-  if (h > 0 && v > 0) return "mixed";
-  if (h > 0) return "horizontal";
-  return "vertical";
-}
-
-// src/state.ts
-var state = {
-  coloringEnabled: false,
-  commentDeco: void 0,
-  keyDeco: void 0,
-  valueDeco: void 0,
-  statusItem: void 0
-};
-
-// src/decorations/index.ts
-function rebuildDecorations(context) {
-  state.commentDeco?.dispose();
-  state.keyDeco?.dispose();
-  state.valueDeco?.dispose();
-  const colors = getRowtateColors();
-  state.commentDeco = vscode3.window.createTextEditorDecorationType({
-    color: colors.comment
-  });
-  state.keyDeco = vscode3.window.createTextEditorDecorationType({
-    color: colors.key
-  });
-  state.valueDeco = vscode3.window.createTextEditorDecorationType({
-    color: colors.value
-  });
-  context.subscriptions.push(state.commentDeco, state.keyDeco, state.valueDeco);
-}
-function applyRowtateDecorations() {
-  const editor = vscode3.window.activeTextEditor;
-  if (!editor) return;
-  const doc = editor.document;
-  const text = doc.getText();
-  const lines = text.split(/\r?\n/);
-  const commentRanges = [];
-  const keyRanges = [];
-  const valueRanges = [];
-  for (let lineNo = 0; lineNo < lines.length; lineNo++) {
-    const line = lines[lineNo];
-    if (line.trim().startsWith("//")) {
-      commentRanges.push(
-        new vscode3.Range(
-          new vscode3.Position(lineNo, 0),
-          new vscode3.Position(lineNo, line.length)
-        )
-      );
-    }
-  }
-  const segments = splitIntoSegments(lines);
-  for (const seg of segments) {
-    if (seg.kind !== "block") continue;
-    if (isHorizontalBlock(seg.lines)) {
-      applyHorizontalDecorationsForSegment(seg, keyRanges, valueRanges);
-    } else {
-      applyVerticalDecorationsForSegment(seg, keyRanges, valueRanges);
-    }
-  }
-  editor.setDecorations(state.commentDeco, commentRanges);
-  editor.setDecorations(state.keyDeco, keyRanges);
-  editor.setDecorations(state.valueDeco, valueRanges);
-}
-function applyVerticalDecorationsForSegment(seg, keyRanges, valueRanges) {
-  for (let i = 0; i < seg.lines.length; i++) {
-    const absLineNo = seg.startLine + i;
-    const raw = seg.lines[i];
-    const trimmed = raw.trim();
-    if (!trimmed.startsWith("#")) continue;
-    if (trimmed.startsWith("//")) continue;
-    const m = trimmed.match(/^(\S+)(\s+)(.*)$/) || trimmed.match(/^(\S+)$/);
-    if (!m) continue;
-    const key = m[1];
-    const ws = m[2] ?? "";
-    const keyStart = raw.indexOf(key);
-    if (keyStart < 0) continue;
-    const keyEnd = keyStart + key.length;
-    keyRanges.push(new vscode3.Range(absLineNo, keyStart, absLineNo, keyEnd));
-    if (ws) {
-      const valueStart = keyEnd + ws.length;
-      const valueEnd = raw.length;
-      if (valueStart <= valueEnd) {
-        valueRanges.push(
-          new vscode3.Range(absLineNo, valueStart, absLineNo, valueEnd)
-        );
-      }
-    }
-  }
-}
-function applyHorizontalDecorationsForSegment(seg, keyRanges, valueRanges) {
-  const trimmed = seg.lines.map((l) => l.trim());
-  let headerIdx = -1;
-  for (let i = 0; i < trimmed.length; i++) {
-    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
-    headerIdx = i;
-    break;
-  }
-  if (headerIdx < 0) return;
-  let valuesIdx = -1;
-  for (let i = headerIdx + 1; i < trimmed.length; i++) {
-    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
-    valuesIdx = i;
-    break;
-  }
-  if (valuesIdx < 0) return;
-  const headerAbs = seg.startLine + headerIdx;
-  const valuesAbs = seg.startLine + valuesIdx;
-  keyRanges.push(
-    new vscode3.Range(headerAbs, 0, headerAbs, seg.lines[headerIdx].length)
-  );
-  valueRanges.push(
-    new vscode3.Range(valuesAbs, 0, valuesAbs, seg.lines[valuesIdx].length)
-  );
-}
-
-// src/commands/index.ts
-var vscode9 = __toESM(require("vscode"));
-
-// src/commands/toggleLayout.ts
-var vscode4 = __toESM(require("vscode"));
-
-// src/core/csv.ts
-function splitSimpleCsvLine(line) {
-  const out = [];
-  let cur = "";
-  let inQuotes = false;
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i];
-    if (ch === "," && !inQuotes) {
-      out.push(normalizeField(cur));
-      cur = "";
-      continue;
-    }
-    if (ch === '"') {
-      const next = line[i + 1];
-      if (inQuotes && next === '"') {
-        cur += '""';
-        i++;
-        continue;
-      }
-      inQuotes = !inQuotes;
-      cur += '"';
-      continue;
-    }
-    if (ch === "\\" && inQuotes) {
-      const next = line[i + 1];
-      if (next === '"' || next === "\\") {
-        cur += "\\" + next;
-        i++;
-        continue;
-      }
-    }
-    cur += ch;
-  }
-  out.push(normalizeField(cur));
-  return out;
-}
-function normalizeField(field) {
-  const f = field.trim();
-  return f;
-}
-function csvEncodeField(field) {
-  if (field === "") return "";
-  const trimmed = field.trim();
-  if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed;
-  }
-  const needsQuotes = /[",\r\n]/.test(field) || field !== field.trim();
-  if (!needsQuotes) return field;
-  const escaped = field.replace(/"/g, '""');
-  return `"${escaped}"`;
-}
-
-// src/core/transform.ts
-function toVertical(allLines) {
-  const blocks = splitIntoBlocks(allLines);
-  const outBlocks = [];
-  for (const block of blocks) {
-    const preserved = [];
-    let i = 0;
-    while (i < block.length && !block[i].trim().startsWith("#")) {
-      preserved.push(block[i]);
-      i++;
-    }
-    if (i >= block.length) {
-      outBlocks.push(block.join("\n"));
-      continue;
-    }
-    const header = block[i];
-    const values = block[i + 1];
-    if (values === void 0) {
-      outBlocks.push(block.join("\n"));
-      continue;
-    }
-    const keys = splitSimpleCsvLine(header);
-    const vals = splitSimpleCsvLine(values);
-    const maxLen = Math.max(keys.length, vals.length);
-    const SEP = "	";
-    const rows = [];
-    for (let k = 0; k < maxLen; k++) {
-      rows.push(`${keys[k] ?? ""}${SEP}${vals[k] ?? ""}`);
-    }
-    const out = [...preserved, ...rows].join("\n");
-    outBlocks.push(out);
-  }
-  return outBlocks.join("\n\n") + "\n";
-}
-function toHorizontal(allLines) {
-  const blocks = splitIntoBlocks(allLines);
-  const outBlocks = [];
-  for (const block of blocks) {
-    const preserved = [];
-    const keys = [];
-    const values = [];
-    let pendingKey = null;
-    const flushPending = () => {
-      if (pendingKey !== null) {
-        keys.push(pendingKey);
-        values.push("");
-        pendingKey = null;
-      }
-    };
-    for (let idx = 0; idx < block.length; idx++) {
-      const rawLine = block[idx];
-      const trimmed = rawLine.trim();
-      if (!trimmed) continue;
-      if (trimmed.startsWith("//")) {
-        preserved.push(rawLine);
-        continue;
-      }
-      if (pendingKey !== null) {
-        if (trimmed.startsWith("#")) {
-          keys.push(pendingKey);
-          values.push("");
-          pendingKey = null;
-        } else {
-          keys.push(pendingKey);
-          values.push(trimmed);
-          pendingKey = null;
-          continue;
-        }
-      }
-      if (trimmed.startsWith("#")) {
-        const m = trimmed.match(/^(\S+)\s+(.+)$/);
-        if (m) {
-          keys.push(m[1].trim());
-          values.push(m[2].trim());
-          continue;
-        }
-        pendingKey = trimmed;
-        continue;
-      }
-      preserved.push(rawLine);
-    }
-    flushPending();
-    if (keys.length === 0) {
-      outBlocks.push(block.join("\n"));
-      continue;
-    }
-    const csvBlock = `${keys.join(",")}
-${values.map(csvEncodeField).join(",")}`;
-    const out = preserved.length > 0 ? `${preserved.join("\n")}
-${csvBlock}` : csvBlock;
-    outBlocks.push(out);
-  }
-  return outBlocks.join("\n\n") + "\n";
-}
-function convertBlockToVertical(blockLines) {
-  const preserved = [];
-  let i = 0;
-  while (i < blockLines.length && !blockLines[i].trim().startsWith("#")) {
-    preserved.push(blockLines[i]);
-    i++;
-  }
-  if (i >= blockLines.length) return blockLines;
-  const header = blockLines[i];
-  const values = blockLines[i + 1];
-  if (values === void 0) return blockLines;
-  const keys = splitSimpleCsvLine(header);
-  const vals = splitSimpleCsvLine(values);
-  const maxLen = Math.max(keys.length, vals.length);
-  const SEP = "	";
-  const rows = [];
-  for (let k = 0; k < maxLen; k++) {
-    rows.push(`${keys[k] ?? ""}${SEP}${vals[k] ?? ""}`);
-  }
-  return [...preserved, ...rows];
-}
-function convertBlockToHorizontal(blockLines) {
-  const preserved = [];
-  const keys = [];
-  const values = [];
-  let pendingKey = null;
-  const flushPending = () => {
-    if (pendingKey !== null) {
-      keys.push(pendingKey);
-      values.push("");
-      pendingKey = null;
-    }
-  };
-  for (let idx = 0; idx < blockLines.length; idx++) {
-    const rawLine = blockLines[idx];
-    const trimmed = rawLine.trim();
-    if (!trimmed) continue;
-    if (trimmed.startsWith("//")) {
-      preserved.push(rawLine);
-      continue;
-    }
-    if (pendingKey !== null) {
-      if (trimmed.startsWith("#")) {
-        keys.push(pendingKey);
-        values.push("");
-        pendingKey = null;
-      } else {
-        keys.push(pendingKey);
-        values.push(trimmed);
-        pendingKey = null;
-        continue;
-      }
-    }
-    if (trimmed.startsWith("#")) {
-      const m = trimmed.match(/^(\S+)\s+(.+)$/);
-      if (m) {
-        keys.push(m[1].trim());
-        values.push(m[2].trim());
-        continue;
-      }
-      pendingKey = trimmed;
-      continue;
-    }
-    preserved.push(rawLine);
-  }
-  flushPending();
-  if (keys.length === 0) return blockLines;
-  const headerLine = keys.join(",");
-  const valueLine = values.map(csvEncodeField).join(",");
-  const out = [];
-  if (preserved.length > 0) out.push(...preserved);
-  out.push(headerLine);
-  out.push(valueLine);
-  return out;
-}
-
-// src/commands/toggleLayout.ts
-async function toggleKeyValueLayout() {
-  const editor = vscode4.window.activeTextEditor;
-  if (!editor) {
-    vscode4.window.showErrorMessage("Rowtate: No active text editor.");
-    return;
-  }
-  const doc = editor.document;
-  const text = doc.getText();
-  const lines = text.split(/\r?\n/);
-  if (lines.every((l) => l.trim().length === 0)) {
-    vscode4.window.showErrorMessage("Rowtate: Document is empty.");
-    return;
-  }
-  const mode = detectFileMode(lines);
-  let status;
-  if (mode === "mixed") {
-    state.statusItem.text = "$(sync) Rowtate: Mixed \u2192 Vertical";
-    state.statusItem.show();
-  }
-  let newText;
-  if (mode === "horizontal") {
-    newText = toVertical(lines);
-  } else if (mode === "vertical") {
-    newText = toHorizontal(lines);
-  } else {
-    const segments = splitIntoSegments(lines);
-    const newLines = [];
-    for (const seg of segments) {
-      if (seg.kind === "blank") {
-        newLines.push(...seg.lines);
-        continue;
-      }
-      if (isHorizontalBlock(seg.lines)) {
-        newLines.push(...convertBlockToVertical(seg.lines));
-      } else {
-        newLines.push(...seg.lines);
-      }
-    }
-    newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
-  }
-  const fullRange = new vscode4.Range(
-    doc.positionAt(0),
-    doc.positionAt(text.length)
-  );
-  const edit = new vscode4.WorkspaceEdit();
-  edit.replace(doc.uri, fullRange, newText);
-  await vscode4.workspace.applyEdit(edit);
-  if (state.coloringEnabled) applyRowtateDecorations();
-  if (mode === "mixed") {
-    setTimeout(() => state.statusItem.hide(), 2500);
-  }
-}
-
-// src/commands/toggleColoring.ts
-var vscode5 = __toESM(require("vscode"));
-function toggleColoring() {
-  state.coloringEnabled = !state.coloringEnabled;
-  if (state.coloringEnabled) {
-    applyRowtateDecorations();
-    vscode5.window.setStatusBarMessage("Rowtate coloring: ON", 2e3);
-  } else {
-    clearRowtateDecorations();
-    vscode5.window.setStatusBarMessage("Rowtate coloring: OFF", 2e3);
-  }
-}
-function clearRowtateDecorations() {
-  const editor = vscode5.window.activeTextEditor;
-  if (!editor) return;
-  editor.setDecorations(state.commentDeco, []);
-  editor.setDecorations(state.keyDeco, []);
-  editor.setDecorations(state.valueDeco, []);
-}
-
-// src/commands/convertBlocks.ts
-var vscode6 = __toESM(require("vscode"));
-async function convertSelectedBlocks(direction) {
-  const editor = vscode6.window.activeTextEditor;
-  if (!editor) {
-    vscode6.window.showErrorMessage("Rowtate: No active text editor.");
-    return;
-  }
-  const doc = editor.document;
-  const text = doc.getText();
-  const lines = text.split(/\r?\n/);
-  if (lines.every((l) => l.trim().length === 0)) {
-    vscode6.window.showErrorMessage("Rowtate: Document is empty.");
-    return;
-  }
-  const segments = splitIntoSegments(lines);
-  const selectedSegIndexes = getSelectedBlockSegmentIndexes(editor, segments);
-  if (selectedSegIndexes.size === 0) {
-    vscode6.window.showWarningMessage("Rowtate: No blocks selected.");
-    return;
-  }
-  const newLines = [];
-  for (let si = 0; si < segments.length; si++) {
-    const seg = segments[si];
-    if (seg.kind === "blank") {
-      newLines.push(...seg.lines);
-      continue;
-    }
-    if (!selectedSegIndexes.has(si)) {
-      newLines.push(...seg.lines);
-      continue;
-    }
-    if (direction === "toVertical") {
-      if (isHorizontalBlock(seg.lines)) {
-        newLines.push(...convertBlockToVertical(seg.lines));
-      } else {
-        newLines.push(...seg.lines);
-      }
-    } else {
-      if (isVerticalBlock(seg.lines)) {
-        newLines.push(...convertBlockToHorizontal(seg.lines));
-      } else {
-        newLines.push(...seg.lines);
-      }
-    }
-  }
-  const newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
-  const fullRange = new vscode6.Range(
-    doc.positionAt(0),
-    doc.positionAt(text.length)
-  );
-  const edit = new vscode6.WorkspaceEdit();
-  edit.replace(doc.uri, fullRange, newText);
-  await vscode6.workspace.applyEdit(edit);
-  if (state.coloringEnabled) applyRowtateDecorations();
-}
-function getSelectedBlockSegmentIndexes(editor, segments) {
-  const selected = /* @__PURE__ */ new Set();
-  const selections = editor.selections;
-  for (const sel of selections) {
-    const a = sel.start.line;
-    const b = sel.end.line;
-    const selMin = Math.min(a, b);
-    const selMax = Math.max(a, b);
-    if (sel.isEmpty) {
-      const idx = segments.findIndex(
-        (s) => s.kind === "block" && s.startLine <= selMin && s.endLine >= selMin
-      );
-      if (idx >= 0) selected.add(idx);
-      continue;
-    }
-    for (let si = 0; si < segments.length; si++) {
-      const s = segments[si];
-      if (s.kind !== "block") continue;
-      const intersects = !(s.endLine < selMin || s.startLine > selMax);
-      if (intersects) selected.add(si);
-    }
-  }
-  return selected;
-}
-
-// src/webviews/colourPicker/open.ts
-var vscode7 = __toESM(require("vscode"));
-
-// src/webviews/colourPicker/html.ts
-function getColorPickerHtml(webview, colors) {
-  const nonce = getNonce();
-  const csp = `
+`)+`
+`}function M(e){let n=[],t=0;for(;t<e.length&&!e[t].trim().startsWith("#");)n.push(e[t]),t++;if(t>=e.length)return e;let s=e[t],o=e[t+1];if(o===void 0)return e;let i=P(s),r=P(o),a=Math.max(i.length,r.length),c="	",l=[];for(let p=0;p<a;p++)l.push(`${i[p]??""}${c}${r[p]??""}`);return[...n,...l]}function Y(e){let n=[],t=[],s=[],o=null,i=()=>{o!==null&&(t.push(o),s.push(""),o=null)};for(let l=0;l<e.length;l++){let p=e[l],u=p.trim();if(u){if(u.startsWith("//")){n.push(p);continue}if(o!==null)if(u.startsWith("#"))t.push(o),s.push(""),o=null;else{t.push(o),s.push(u),o=null;continue}if(u.startsWith("#")){let m=u.match(/^(\S+)\s+(.+)$/);if(m){t.push(m[1].trim()),s.push(m[2].trim());continue}o=u;continue}n.push(p)}}if(i(),t.length===0)return e;let r=t.join(","),a=s.map(z).join(","),c=[];return n.length>0&&c.push(...n),c.push(r),c.push(a),c}async function J(){let e=S.window.activeTextEditor;if(!e){S.window.showErrorMessage("Rowtate: No active text editor.");return}let n=e.document,t=n.getText(),s=t.split(/\r?\n/);if(s.every(l=>l.trim().length===0)){S.window.showErrorMessage("Rowtate: Document is empty.");return}let o=K(s),i;o==="mixed"&&(d.statusItem.text="$(sync) Rowtate: Mixed \u2192 Vertical",d.statusItem.show());let r;if(o==="horizontal")r=G(s);else if(o==="vertical")r=Q(s);else{let l=E(s),p=[];for(let u of l){if(u.kind==="blank"){p.push(...u.lines);continue}C(u.lines)?p.push(...M(u.lines)):p.push(...u.lines)}r=p.join(`
+`).replace(/\s*$/,"")+`
+`}let a=new S.Range(n.positionAt(0),n.positionAt(t.length)),c=new S.WorkspaceEdit;c.replace(n.uri,a,r),await S.workspace.applyEdit(c),d.coloringEnabled&&g(),o==="mixed"&&setTimeout(()=>d.statusItem.hide(),2500)}var V=x(require("vscode"));function X(){d.coloringEnabled=!d.coloringEnabled,d.coloringEnabled?(g(),V.window.setStatusBarMessage("Rowtate coloring: ON",2e3)):(ge(),V.window.setStatusBarMessage("Rowtate coloring: OFF",2e3))}function ge(){let e=V.window.activeTextEditor;e&&(e.setDecorations(d.commentDeco,[]),e.setDecorations(d.keyDeco,[]),e.setDecorations(d.valueDeco,[]))}var b=x(require("vscode"));async function H(e){let n=b.window.activeTextEditor;if(!n){b.window.showErrorMessage("Rowtate: No active text editor.");return}let t=n.document,s=t.getText(),o=s.split(/\r?\n/);if(o.every(u=>u.trim().length===0)){b.window.showErrorMessage("Rowtate: Document is empty.");return}let i=E(o),r=fe(n,i);if(r.size===0){b.window.showWarningMessage("Rowtate: No blocks selected.");return}let a=[];for(let u=0;u<i.length;u++){let m=i[u];if(m.kind==="blank"){a.push(...m.lines);continue}if(!r.has(u)){a.push(...m.lines);continue}e==="toVertical"?C(m.lines)?a.push(...M(m.lines)):a.push(...m.lines):A(m.lines)?a.push(...Y(m.lines)):a.push(...m.lines)}let c=a.join(`
+`).replace(/\s*$/,"")+`
+`,l=new b.Range(t.positionAt(0),t.positionAt(s.length)),p=new b.WorkspaceEdit;p.replace(t.uri,l,c),await b.workspace.applyEdit(p),d.coloringEnabled&&g()}function fe(e,n){let t=new Set,s=e.selections;for(let o of s){let i=o.start.line,r=o.end.line,a=Math.min(i,r),c=Math.max(i,r);if(o.isEmpty){let l=n.findIndex(p=>p.kind==="block"&&p.startLine<=a&&p.endLine>=a);l>=0&&t.add(l);continue}for(let l=0;l<n.length;l++){let p=n[l];if(p.kind!=="block")continue;!(p.endLine<a||p.startLine>c)&&t.add(l)}}return t}var h=x(require("vscode"));function Z(e,n){let t=L(),s=`
     default-src 'none';
-    style-src ${webview.cspSource} 'unsafe-inline';
-    script-src 'nonce-${nonce}';
-  `.replace(/\s+/g, " ").trim();
-  const norm = (c) => c.startsWith("#") && c.length >= 7 ? c.slice(0, 7) : "#000000";
-  return (
-    /* html */
-    `<!DOCTYPE html>
+    style-src ${e.cspSource} 'unsafe-inline';
+    script-src 'nonce-${t}';
+  `.replace(/\s+/g," ").trim(),o=i=>i.startsWith("#")&&i.length>=7?i.slice(0,7):"#000000";return`<!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
+  <meta http-equiv="Content-Security-Policy" content="${s}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Rowtate: Pick Colors</title>
   <style>
@@ -1009,20 +318,20 @@ function getColorPickerHtml(webview, colors) {
   <div class="card">
     <div class="row">
       <label>Comment</label>
-      <input id="commentPicker" type="color" value="${norm(colors.comment)}">
-      <input id="commentText" type="text" value="${colors.comment}">
+      <input id="commentPicker" type="color" value="${o(n.comment)}">
+      <input id="commentText" type="text" value="${n.comment}">
     </div>
 
     <div class="row">
       <label>Key</label>
-      <input id="keyPicker" type="color" value="${norm(colors.key)}">
-      <input id="keyText" type="text" value="${colors.key}">
+      <input id="keyPicker" type="color" value="${o(n.key)}">
+      <input id="keyText" type="text" value="${n.key}">
     </div>
 
     <div class="row">
       <label>Value</label>
-      <input id="valuePicker" type="color" value="${norm(colors.value)}">
-      <input id="valueText" type="text" value="${colors.value}">
+      <input id="valuePicker" type="color" value="${o(n.value)}">
+      <input id="valueText" type="text" value="${n.value}">
     </div>
 
     <div class="preview mono" id="preview">
@@ -1037,12 +346,12 @@ function getColorPickerHtml(webview, colors) {
     </div>
 
     <div class="small">
-      Saved to: <b>${colors.target === "workspace" ? "Workspace" : "User"}</b>
+      Saved to: <b>${n.target==="workspace"?"Workspace":"User"}</b>
       (change via <code>rowtate.colors.target</code> setting)
     </div>
   </div>
 
-  <script nonce="${nonce}">
+  <script nonce="${t}">
     const vscode = acquireVsCodeApi();
 
     const commentPicker = document.getElementById("commentPicker");
@@ -1105,72 +414,17 @@ function getColorPickerHtml(webview, colors) {
     applyPreview();
   </script>
 </body>
-</html>`
-  );
-}
-
-// src/webviews/colourPicker/open.ts
-async function openColorPickerWebview(context) {
-  const colors = getRowtateColors();
-  const panel = vscode7.window.createWebviewPanel(
-    "rowtateColors",
-    "Rowtate: Pick Colors",
-    vscode7.ViewColumn.Active,
-    { enableScripts: true, retainContextWhenHidden: false }
-  );
-  panel.webview.html = getColorPickerHtml(panel.webview, colors);
-  panel.webview.onDidReceiveMessage(async (msg) => {
-    if (!msg || typeof msg.type !== "string") return;
-    if (msg.type === "save") {
-      const { comment, key, value } = msg.colors ?? {};
-      if (typeof comment !== "string" || typeof key !== "string" || typeof value !== "string")
-        return;
-      const cfg = vscode7.workspace.getConfiguration("rowtate");
-      const target = colors.target === "workspace" ? vscode7.ConfigurationTarget.Workspace : vscode7.ConfigurationTarget.Global;
-      await cfg.update("colors.comment", comment, target);
-      await cfg.update("colors.key", key, target);
-      await cfg.update("colors.value", value, target);
-      rebuildDecorations(context);
-      if (state.coloringEnabled) applyRowtateDecorations();
-      panel.dispose();
-    }
-    if (msg.type === "cancel") {
-      panel.dispose();
-    }
-    if (msg.type === "reset") {
-      const cfg = vscode7.workspace.getConfiguration("rowtate");
-      const target = colors.target === "workspace" ? vscode7.ConfigurationTarget.Workspace : vscode7.ConfigurationTarget.Global;
-      await cfg.update("colors.comment", void 0, target);
-      await cfg.update("colors.key", void 0, target);
-      await cfg.update("colors.value", void 0, target);
-      rebuildDecorations(context);
-      if (state.coloringEnabled) applyRowtateDecorations();
-      panel.dispose();
-    }
-  });
-}
-
-// src/webviews/reorder/open.ts
-var vscode8 = __toESM(require("vscode"));
-
-// src/webviews/reorder/html.ts
-function getReorderWebviewHtml(webview, lines, colors) {
-  const nonce = getNonce();
-  const data = JSON.stringify(lines);
-  const csp = `
-    default-src 'none';
-    img-src ${webview.cspSource} https:;
-    style-src ${webview.cspSource} 'unsafe-inline';
-    script-src 'nonce-${nonce}';
-  `.replace(/\s+/g, " ").trim();
-  return (
-    /* html */
-    `
+</html>`}async function _(e){let n=D(),t=h.window.createWebviewPanel("rowtateColors","Rowtate: Pick Colors",h.ViewColumn.Active,{enableScripts:!0,retainContextWhenHidden:!1});t.webview.html=Z(t.webview,n),t.webview.onDidReceiveMessage(async s=>{if(!(!s||typeof s.type!="string")){if(s.type==="save"){let{comment:o,key:i,value:r}=s.colors??{};if(typeof o!="string"||typeof i!="string"||typeof r!="string")return;let a=h.workspace.getConfiguration("rowtate"),c=n.target==="workspace"?h.ConfigurationTarget.Workspace:h.ConfigurationTarget.Global;await a.update("colors.comment",o,c),await a.update("colors.key",i,c),await a.update("colors.value",r,c),B(e),d.coloringEnabled&&g(),t.dispose()}if(s.type==="cancel"&&t.dispose(),s.type==="reset"){let o=h.workspace.getConfiguration("rowtate"),i=n.target==="workspace"?h.ConfigurationTarget.Workspace:h.ConfigurationTarget.Global;await o.update("colors.comment",void 0,i),await o.update("colors.key",void 0,i),await o.update("colors.value",void 0,i),B(e),d.coloringEnabled&&g(),t.dispose()}}})}var f=x(require("vscode"));function ee(e,n,t){let s=L(),o=JSON.stringify(n);return`
 <!DOCTYPE html>
 <html>
 <head>
   <meta charset="UTF-8" />
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
+  <meta http-equiv="Content-Security-Policy" content="${`
+    default-src 'none';
+    img-src ${e.cspSource} https:;
+    style-src ${e.cspSource} 'unsafe-inline';
+    script-src 'nonce-${s}';
+  `.replace(/\s+/g," ").trim()}">
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Rowtate Reorder</title>
   <style>
@@ -1207,9 +461,9 @@ function getReorderWebviewHtml(webview, lines, colors) {
     .row.drop-target { outline: 2px dashed #888; outline-offset: -2px; }
 
     .text { white-space: pre; overflow-x: auto; }
-    .comment { color: ${colors.comment}; }
-    .kv-key { color: ${colors.key}; }
-    .kv-val { color: ${colors.value}; }
+    .comment { color: ${t.comment}; }
+    .kv-key { color: ${t.key}; }
+    .kv-val { color: ${t.value}; }
 
 
     .blank .text { opacity: 0.5; font-style: italic; }
@@ -1227,9 +481,9 @@ function getReorderWebviewHtml(webview, lines, colors) {
 
   <div id="list" class="list"></div>
 
-  <script nonce="${nonce}">
+  <script nonce="${s}">
     const vscode = acquireVsCodeApi();
-    let lines = ${data};
+    let lines = ${o};
 
     const listEl = document.getElementById("list");
 
@@ -1362,177 +616,6 @@ function getReorderWebviewHtml(webview, lines, colors) {
   </script>
 </body>
 </html>
-`
-  );
-}
-
-// src/webviews/reorder/open.ts
-async function openReorderWebview() {
-  const editor = vscode8.window.activeTextEditor;
-  if (!editor) {
-    vscode8.window.showErrorMessage("Rowtate: No active text editor.");
-    return;
-  }
-  const doc = editor.document;
-  const text = doc.getText();
-  const lines = text.split(/\r?\n/);
-  if (lines.every((l) => l.trim().length === 0)) {
-    vscode8.window.showErrorMessage("Rowtate: Document is empty.");
-    return;
-  }
-  const model = buildVerticalReorderModel(lines);
-  if (!model.includedSegIndexes.some((i) => model.segments[i]?.kind === "block")) {
-    vscode8.window.showWarningMessage(
-      "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected)."
-    );
-    return;
-  }
-  const panel = vscode8.window.createWebviewPanel(
-    "rowtateReorder",
-    "Rowtate: Reorder Vertical Rows (Mixed Mode OK)",
-    vscode8.ViewColumn.Beside,
-    {
-      enableScripts: true,
-      retainContextWhenHidden: true
-    }
-  );
-  const colors = getRowtateColors();
-  panel.webview.html = getReorderWebviewHtml(
-    panel.webview,
-    model.flatLines,
-    colors
-  );
-  panel.webview.onDidReceiveMessage(async (msg) => {
-    if (!msg || typeof msg.type !== "string") return;
-    if (msg.type === "apply") {
-      const newFlat = msg.lines;
-      if (!Array.isArray(newFlat)) return;
-      if (newFlat.length !== model.flatLines.length) {
-        vscode8.window.showErrorMessage(
-          "Rowtate: Reorder apply failed (line count mismatch)."
-        );
-        return;
-      }
-      const rebuiltSegments = model.segments.map((seg) => ({ ...seg }));
-      let cursor = 0;
-      for (let k = 0; k < model.includedSegIndexes.length; k++) {
-        const segIdx = model.includedSegIndexes[k];
-        const segLen = model.includedSegLengths[k];
-        const slice = newFlat.slice(cursor, cursor + segLen);
-        cursor += segLen;
-        rebuiltSegments[segIdx].lines = slice;
-      }
-      const newLines = [];
-      for (const seg of rebuiltSegments) {
-        newLines.push(...seg.lines);
-      }
-      const newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
-      const fullRange = new vscode8.Range(
-        doc.positionAt(0),
-        doc.positionAt(text.length)
-      );
-      const edit = new vscode8.WorkspaceEdit();
-      edit.replace(doc.uri, fullRange, newText);
-      await vscode8.workspace.applyEdit(edit);
-      await doc.save();
-      if (state.coloringEnabled) applyRowtateDecorations();
-      panel.dispose();
-    }
-    if (msg.type === "cancel") {
-      panel.dispose();
-    }
-  });
-}
-function buildVerticalReorderModel(allLines) {
-  const segments = splitIntoSegments(allLines);
-  const includedSegIndexes = [];
-  const includedSegLengths = [];
-  const flatLines = [];
-  const isReorderableBlock = (seg) => seg.kind === "block" && !isHorizontalBlock(seg.lines);
-  for (let i = 0; i < segments.length; i++) {
-    const seg = segments[i];
-    if (isReorderableBlock(seg)) {
-      includedSegIndexes.push(i);
-      includedSegLengths.push(seg.lines.length);
-      flatLines.push(...seg.lines);
-      continue;
-    }
-    if (seg.kind === "blank") {
-      const prev = segments[i - 1];
-      const next = segments[i + 1];
-      const prevIsVert = prev ? isReorderableBlock(prev) : false;
-      const nextIsVert = next ? isReorderableBlock(next) : false;
-      if (prevIsVert && nextIsVert) {
-        includedSegIndexes.push(i);
-        includedSegLengths.push(seg.lines.length);
-        flatLines.push(...seg.lines);
-      }
-    }
-  }
-  return { segments, includedSegIndexes, includedSegLengths, flatLines };
-}
-
-// src/commands/index.ts
-function registerCommands(context) {
-  context.subscriptions.push(
-    vscode9.commands.registerCommand("rowtate.toggle", toggleKeyValueLayout),
-    vscode9.commands.registerCommand("rowtate.toggleColoring", toggleColoring),
-    vscode9.commands.registerCommand(
-      "rowtate.reorderVertical",
-      openReorderWebview
-    ),
-    vscode9.commands.registerCommand(
-      "rowtate.blocksToVertical",
-      () => convertSelectedBlocks("toVertical")
-    ),
-    vscode9.commands.registerCommand(
-      "rowtate.blocksToHorizontal",
-      () => convertSelectedBlocks("toHorizontal")
-    ),
-    vscode9.commands.registerCommand(
-      "rowtate.pickColors",
-      () => openColorPickerWebview(context)
-    )
-  );
-}
-
-// src/extension.ts
-function activate(context) {
-  console.log("Rowtate is now active!");
-  const provider = new RowtateSidebarProvider(context.extensionUri);
-  context.subscriptions.push(
-    vscode10.window.registerWebviewViewProvider("rowtate.sidebar", provider)
-  );
-  rebuildDecorations(context);
-  state.statusItem = vscode10.window.createStatusBarItem(
-    vscode10.StatusBarAlignment.Left,
-    1e3
-  );
-  state.statusItem.hide();
-  context.subscriptions.push(state.statusItem);
-  registerCommands(context);
-  context.subscriptions.push(
-    vscode10.workspace.onDidChangeConfiguration((e) => {
-      if (e.affectsConfiguration("rowtate.colors.comment") || e.affectsConfiguration("rowtate.colors.key") || e.affectsConfiguration("rowtate.colors.value")) {
-        rebuildDecorations(context);
-        if (state.coloringEnabled) applyRowtateDecorations();
-      }
-    })
-  );
-  context.subscriptions.push(
-    vscode10.window.onDidChangeActiveTextEditor(() => {
-      if (state.coloringEnabled) applyRowtateDecorations();
-    }),
-    vscode10.workspace.onDidChangeTextDocument(() => {
-      if (state.coloringEnabled) applyRowtateDecorations();
-    })
-  );
-}
-function deactivate() {
-}
-// Annotate the CommonJS export names for ESM import in node:
-0 && (module.exports = {
-  activate,
-  deactivate
-});
-//# sourceMappingURL=extension.js.map
+`}async function te(){let e=f.window.activeTextEditor;if(!e){f.window.showErrorMessage("Rowtate: No active text editor.");return}let n=e.document,t=n.getText(),s=t.split(/\r?\n/);if(s.every(a=>a.trim().length===0)){f.window.showErrorMessage("Rowtate: Document is empty.");return}let o=ve(s);if(!o.includedSegIndexes.some(a=>o.segments[a]?.kind==="block")){f.window.showWarningMessage("Rowtate: No vertical blocks found to reorder (only horizontal blocks detected).");return}let i=f.window.createWebviewPanel("rowtateReorder","Rowtate: Reorder Vertical Rows (Mixed Mode OK)",f.ViewColumn.Beside,{enableScripts:!0,retainContextWhenHidden:!0}),r=D();i.webview.html=ee(i.webview,o.flatLines,r),i.webview.onDidReceiveMessage(async a=>{if(!(!a||typeof a.type!="string")){if(a.type==="apply"){let c=a.lines;if(!Array.isArray(c))return;if(c.length!==o.flatLines.length){f.window.showErrorMessage("Rowtate: Reorder apply failed (line count mismatch).");return}let l=o.segments.map(R=>({...R})),p=0;for(let R=0;R<o.includedSegIndexes.length;R++){let ne=o.includedSegIndexes[R],N=o.includedSegLengths[R],se=c.slice(p,p+N);p+=N,l[ne].lines=se}let u=[];for(let R of l)u.push(...R.lines);let m=u.join(`
+`).replace(/\s*$/,"")+`
+`,v=new f.Range(n.positionAt(0),n.positionAt(t.length)),y=new f.WorkspaceEdit;y.replace(n.uri,v,m),await f.workspace.applyEdit(y),await n.save(),d.coloringEnabled&&g(),i.dispose()}a.type==="cancel"&&i.dispose()}})}function ve(e){let n=E(e),t=[],s=[],o=[],i=r=>r.kind==="block"&&!C(r.lines);for(let r=0;r<n.length;r++){let a=n[r];if(i(a)){t.push(r),s.push(a.lines.length),o.push(...a.lines);continue}if(a.kind==="blank"){let c=n[r-1],l=n[r+1],p=c?i(c):!1,u=l?i(l):!1;p&&u&&(t.push(r),s.push(a.lines.length),o.push(...a.lines))}}return{segments:n,includedSegIndexes:t,includedSegLengths:s,flatLines:o}}function oe(e){e.subscriptions.push(I.commands.registerCommand("rowtate.toggle",J),I.commands.registerCommand("rowtate.toggleColoring",X),I.commands.registerCommand("rowtate.reorderVertical",te),I.commands.registerCommand("rowtate.blocksToVertical",()=>H("toVertical")),I.commands.registerCommand("rowtate.blocksToHorizontal",()=>H("toHorizontal")),I.commands.registerCommand("rowtate.pickColors",()=>_(e)))}function we(e){console.log("Rowtate is now active!");let n=new $(e.extensionUri);e.subscriptions.push(T.window.registerWebviewViewProvider("rowtate.sidebar",n)),B(e),d.statusItem=T.window.createStatusBarItem(T.StatusBarAlignment.Left,1e3),d.statusItem.hide(),e.subscriptions.push(d.statusItem),oe(e),e.subscriptions.push(T.workspace.onDidChangeConfiguration(t=>{(t.affectsConfiguration("rowtate.colors.comment")||t.affectsConfiguration("rowtate.colors.key")||t.affectsConfiguration("rowtate.colors.value"))&&(B(e),d.coloringEnabled&&g())})),e.subscriptions.push(T.window.onDidChangeActiveTextEditor(()=>{d.coloringEnabled&&g()}),T.workspace.onDidChangeTextDocument(()=>{d.coloringEnabled&&g()}))}function he(){}0&&(module.exports={activate,deactivate});
