@@ -78,7 +78,7 @@ export function getSidebarHtml(
     .btn:hover { filter: brightness(1.06); }
     .btn:active { transform: translateY(1px); }
 
-    .btn.selected {
+    .btn.flash {
       background: #7a5a12;
       color: #d7d7d7;
       border-color: transparent;
@@ -207,9 +207,11 @@ export function getSidebarHtml(
     let busy = false;
     let pendingRequestId = null;
 
-    function setSelected(btn) {
-      buttons.forEach(b => b.classList.remove("selected"));
-      btn.classList.add("selected");
+    function flash(btn) {
+      btn.classList.remove("flash");
+      void btn.offsetWidth; // restart
+      btn.classList.add("flash");
+      setTimeout(() => btn.classList.remove("flash"), 180);
     }
 
     function pulse(btn) {
@@ -238,9 +240,7 @@ export function getSidebarHtml(
       btn.addEventListener("click", () => {
         if (busy) return;
 
-        const alreadySelected = btn.classList.contains("selected");
-        if (alreadySelected) pulse(btn);
-        else setSelected(btn);
+        flash(btn);
 
         setBusy(true);
 
@@ -279,10 +279,7 @@ export function getSidebarHtml(
       pendingRequestId = null;
       setBusy(false);
 
-      if (msg.ok === false) {
-        const sel = buttons.find(b => b.classList.contains("selected"));
-        if (sel) pulse(sel);
-      }
+      
     });
   </script>
 </body>
