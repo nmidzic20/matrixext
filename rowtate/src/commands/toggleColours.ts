@@ -2,7 +2,7 @@ import * as vscode from "vscode";
 import { state } from "../state";
 import { applyRowtateDecorations } from "../decorations";
 
-function toggleColoring() {
+function toggleColours() {
   state.coloringEnabled = !state.coloringEnabled;
 
   if (state.coloringEnabled) {
@@ -13,7 +13,7 @@ function toggleColoring() {
     vscode.window.setStatusBarMessage("Rowtate coloring: OFF", 2000);
   }
 }
-export { toggleColoring };
+export { toggleColours };
 
 function clearRowtateDecorations() {
   const editor = vscode.window.activeTextEditor;

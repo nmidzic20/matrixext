@@ -178,25 +178,9 @@ function getSidebarHtml(webview, opts) {
     </div>
   </div>
 
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggle">Toggle Key/Value Layout</button>
-    <div class="sub">
-      <a data-bind="rowtate.toggle">Bind key\u2026</a>
-      <span class="dot">\u2022</span>
-      <a data-copy="rowtate.toggle">Copy command id</a>
-    </div>
+  <div class="hint">
+    Tip: "Toggle Selection Layout" command acts on block(s) under your cursor (single block) or selection (single or multiple blocks).
   </div>
-
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggleColoring">Toggle Colouring</button>
-    <div class="sub">
-      <a data-bind="rowtate.toggleColoring">Bind key\u2026</a>
-      <span class="dot">\u2022</span>
-      <a data-copy="rowtate.toggleColoring">Copy command id</a>
-    </div>
-  </div>
-
-  <div class="sep"></div>
 
   <div class="cmd">
     <button class="btn" data-cmd="rowtate.toggleBlocksLayout">
@@ -209,8 +193,23 @@ function getSidebarHtml(webview, opts) {
     </div>
   </div>
 
+<div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggle">Toggle File Layout</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggle">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.toggle">Copy command id</a>
+    </div>
+  </div>
 
-  <div class="sep"></div>
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggleColours">Toggle Colours</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggleColours">Bind key\u2026</a>
+      <span class="dot">\u2022</span>
+      <a data-copy="rowtate.toggleColours">Copy command id</a>
+    </div>
+  </div>
 
   <div class="cmd">
     <button class="btn" data-cmd="rowtate.reorderVertical">Reorder (Vertical rows)</button>
@@ -228,10 +227,6 @@ function getSidebarHtml(webview, opts) {
       <span class="dot">\u2022</span>
       <a data-copy="rowtate.pickColors">Copy command id</a>
     </div>
-  </div>
-
-  <div class="hint">
-    Tip: selection commands act on block(s) under your cursor/selection.
   </div>
 
   <script nonce="${nonce}">
@@ -860,9 +855,9 @@ async function toggleKeyValueLayout() {
   }
 }
 
-// src/commands/toggleColoring.ts
+// src/commands/toggleColours.ts
 var vscode5 = __toESM(require("vscode"));
-function toggleColoring() {
+function toggleColours() {
   state.coloringEnabled = !state.coloringEnabled;
   if (state.coloringEnabled) {
     applyRowtateDecorations();
@@ -901,6 +896,8 @@ async function toggleSelectedBlocksLayout() {
     vscode6.window.showWarningMessage("Rowtate: No blocks selected.");
     return;
   }
+  const activeBefore = editor.selection.active;
+  const anchorSegIndex = findSegmentIndexAtLine(segments, activeBefore.line);
   let selectedHasHorizontal = false;
   let selectedHasVertical = false;
   for (const si of selectedSegIndexes) {
@@ -908,9 +905,7 @@ async function toggleSelectedBlocksLayout() {
     if (!seg || seg.kind !== "block") continue;
     if (isHorizontalBlock(seg.lines)) selectedHasHorizontal = true;
     else if (isVerticalBlock(seg.lines)) selectedHasVertical = true;
-    else {
-      selectedHasVertical = true;
-    }
+    else selectedHasVertical = true;
   }
   if (selectedHasHorizontal && selectedHasVertical) {
     vscode6.window.showWarningMessage(
@@ -920,26 +915,51 @@ async function toggleSelectedBlocksLayout() {
   }
   const direction = selectedHasHorizontal ? "toVertical" : "toHorizontal";
   const newLines = [];
+  let anchorNewStartLine = null;
+  let anchorNewFirstContentLine = null;
+  const toggledNewRanges = [];
+  const firstContentOffset = (blockLines) => {
+    for (let i = 0; i < blockLines.length; i++) {
+      const t = blockLines[i].trim();
+      if (t === "") continue;
+      if (t.startsWith("//")) continue;
+      return i;
+    }
+    return 0;
+  };
   for (let si = 0; si < segments.length; si++) {
     const seg = segments[si];
+    const segNewStart = newLines.length;
     if (seg.kind === "blank") {
       newLines.push(...seg.lines);
       continue;
     }
-    if (!selectedSegIndexes.has(si)) {
-      newLines.push(...seg.lines);
-      continue;
-    }
-    if (direction === "toVertical") {
-      if (isHorizontalBlock(seg.lines))
-        newLines.push(...convertBlockToVertical(seg.lines));
-      else newLines.push(...seg.lines);
-    } else {
-      if (isVerticalBlock(seg.lines))
-        newLines.push(...convertBlockToHorizontal(seg.lines));
-      else {
-        newLines.push(...seg.lines);
+    let outBlockLines = seg.lines;
+    let changed = false;
+    if (selectedSegIndexes.has(si)) {
+      if (direction === "toVertical") {
+        if (isHorizontalBlock(seg.lines)) {
+          outBlockLines = convertBlockToVertical(seg.lines);
+          changed = true;
+        }
+      } else {
+        if (isVerticalBlock(seg.lines)) {
+          outBlockLines = convertBlockToHorizontal(seg.lines);
+          changed = true;
+        }
       }
+    }
+    newLines.push(...outBlockLines);
+    if (changed) {
+      const startLine = segNewStart;
+      const endLine = segNewStart + outBlockLines.length - 1;
+      if (endLine >= startLine) {
+        toggledNewRanges.push(new vscode6.Range(startLine, 0, endLine, 0));
+      }
+    }
+    if (si === anchorSegIndex) {
+      anchorNewStartLine = segNewStart;
+      anchorNewFirstContentLine = segNewStart + firstContentOffset(outBlockLines);
     }
   }
   const newText = newLines.join("\n").replace(/\s*$/, "") + "\n";
@@ -950,7 +970,44 @@ async function toggleSelectedBlocksLayout() {
   const edit = new vscode6.WorkspaceEdit();
   edit.replace(doc.uri, fullRange, newText);
   await vscode6.workspace.applyEdit(edit);
+  const updatedDoc = editor.document;
+  const targetLine = anchorNewFirstContentLine ?? anchorNewStartLine ?? Math.min(activeBefore.line, updatedDoc.lineCount - 1);
+  const safeLine = Math.max(0, Math.min(targetLine, updatedDoc.lineCount - 1));
+  const lineLen = updatedDoc.lineAt(safeLine).text.length;
+  const safeChar = Math.max(0, Math.min(activeBefore.character, lineLen));
+  const activeAfter = new vscode6.Position(safeLine, safeChar);
+  editor.selection = new vscode6.Selection(activeAfter, activeAfter);
+  editor.revealRange(
+    new vscode6.Range(activeAfter, activeAfter),
+    vscode6.TextEditorRevealType.AtTop
+  );
   if (state.coloringEnabled) applyRowtateDecorations();
+  pulseRanges(editor, toggledNewRanges, 260);
+}
+var pulseDecoration = vscode6.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: "rgba(122, 90, 18, 0.35)",
+  // gold-ish
+  borderRadius: "4px"
+});
+function pulseRanges(editor, ranges, ms = 300) {
+  if (!ranges.length) return;
+  editor.setDecorations(pulseDecoration, ranges);
+  setTimeout(() => {
+    try {
+      editor.setDecorations(pulseDecoration, []);
+    } catch {
+    }
+  }, ms);
+}
+function findSegmentIndexAtLine(segments, line) {
+  let bestAbove = -1;
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    if (s.startLine <= line && s.endLine >= line) return i;
+    if (s.endLine < line) bestAbove = i;
+  }
+  return bestAbove >= 0 ? bestAbove : 0;
 }
 function getSelectedBlockSegmentIndexes(editor, segments) {
   const selected = /* @__PURE__ */ new Set();
@@ -1483,7 +1540,7 @@ function buildVerticalReorderModel(allLines) {
 function registerCommands(context) {
   context.subscriptions.push(
     vscode9.commands.registerCommand("rowtate.toggle", toggleKeyValueLayout),
-    vscode9.commands.registerCommand("rowtate.toggleColoring", toggleColoring),
+    vscode9.commands.registerCommand("rowtate.toggleColours", toggleColours),
     vscode9.commands.registerCommand(
       "rowtate.reorderVertical",
       openReorderWebview

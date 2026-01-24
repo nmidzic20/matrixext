@@ -7,7 +7,6 @@ import {
 } from "../core/transform";
 import { state } from "../state";
 import { applyRowtateDecorations } from "../decorations/index";
-
 async function toggleSelectedBlocksLayout() {
   const editor = vscode.window.activeTextEditor;
   if (!editor) {
@@ -32,6 +31,10 @@ async function toggleSelectedBlocksLayout() {
     return;
   }
 
+  // Anchor = segment under the active cursor (NOT the exact line)
+  const activeBefore = editor.selection.active;
+  const anchorSegIndex = findSegmentIndexAtLine(segments, activeBefore.line);
+
   // Decide mode of selected blocks
   let selectedHasHorizontal = false;
   let selectedHasVertical = false;
@@ -42,10 +45,7 @@ async function toggleSelectedBlocksLayout() {
 
     if (isHorizontalBlock(seg.lines)) selectedHasHorizontal = true;
     else if (isVerticalBlock(seg.lines)) selectedHasVertical = true;
-    else {
-      // "unknown" blocks: treat as vertical-ish (same as file-mode logic)
-      selectedHasVertical = true;
-    }
+    else selectedHasVertical = true; // unknown => vertical-ish
   }
 
   // Mixed selection => warn and do nothing
@@ -56,41 +56,78 @@ async function toggleSelectedBlocksLayout() {
     return;
   }
 
-  // All selected are horizontal => convert to vertical
-  // All selected are vertical/unknown => convert to horizontal
+  // All selected horizontal => toVertical, else toHorizontal
   const direction: "toVertical" | "toHorizontal" = selectedHasHorizontal
     ? "toVertical"
     : "toHorizontal";
 
   const newLines: string[] = [];
 
+  // We'll compute where the anchor segment ends up in the NEW document
+  let anchorNewStartLine: number | null = null;
+  let anchorNewFirstContentLine: number | null = null;
+
+  // Pulse ranges (in the NEW document coordinates)
+  const toggledNewRanges: vscode.Range[] = [];
+
+  // Helper: pick first meaningful line in a block output (skip leading blank/comment)
+  const firstContentOffset = (blockLines: string[]): number => {
+    for (let i = 0; i < blockLines.length; i++) {
+      const t = blockLines[i].trim();
+      if (t === "") continue;
+      if (t.startsWith("//")) continue;
+      return i;
+    }
+    return 0;
+  };
+
   for (let si = 0; si < segments.length; si++) {
     const seg = segments[si];
+
+    // Record where this segment starts in the NEW doc
+    const segNewStart = newLines.length;
 
     if (seg.kind === "blank") {
       newLines.push(...seg.lines);
       continue;
     }
 
-    if (!selectedSegIndexes.has(si)) {
-      newLines.push(...seg.lines);
-      continue;
+    // block
+    let outBlockLines: string[] = seg.lines;
+    let changed = false;
+
+    if (selectedSegIndexes.has(si)) {
+      if (direction === "toVertical") {
+        if (isHorizontalBlock(seg.lines)) {
+          outBlockLines = convertBlockToVertical(seg.lines);
+          changed = true;
+        }
+      } else {
+        if (isVerticalBlock(seg.lines)) {
+          outBlockLines = convertBlockToHorizontal(seg.lines);
+          changed = true;
+        }
+        // unknown blocks: leave alone (same as your existing logic)
+      }
     }
 
-    if (direction === "toVertical") {
-      // only convert if actually horizontal
-      if (isHorizontalBlock(seg.lines))
-        newLines.push(...convertBlockToVertical(seg.lines));
-      else newLines.push(...seg.lines);
-    } else {
-      // only convert if actually vertical-ish
-      if (isVerticalBlock(seg.lines))
-        newLines.push(...convertBlockToHorizontal(seg.lines));
-      else {
-        // for unknown blocks leave them alone
-        // (so we don't mangle random text)
-        newLines.push(...seg.lines);
+    // Emit output
+    newLines.push(...outBlockLines);
+
+    // If this block actually changed, record a whole-line range (new doc coordinates)
+    if (changed) {
+      const startLine = segNewStart;
+      const endLine = segNewStart + outBlockLines.length - 1;
+      if (endLine >= startLine) {
+        toggledNewRanges.push(new vscode.Range(startLine, 0, endLine, 0));
       }
+    }
+
+    // If this is the anchor segment, compute target line after conversion
+    if (si === anchorSegIndex) {
+      anchorNewStartLine = segNewStart;
+      anchorNewFirstContentLine =
+        segNewStart + firstContentOffset(outBlockLines);
     }
   }
 
@@ -105,7 +142,66 @@ async function toggleSelectedBlocksLayout() {
   edit.replace(doc.uri, fullRange, newText);
   await vscode.workspace.applyEdit(edit);
 
+  // After edit, put cursor at the anchor block's new location (top-ish)
+  const updatedDoc = editor.document;
+
+  const targetLine =
+    anchorNewFirstContentLine ??
+    anchorNewStartLine ??
+    Math.min(activeBefore.line, updatedDoc.lineCount - 1);
+
+  const safeLine = Math.max(0, Math.min(targetLine, updatedDoc.lineCount - 1));
+  const lineLen = updatedDoc.lineAt(safeLine).text.length;
+  const safeChar = Math.max(0, Math.min(activeBefore.character, lineLen));
+
+  const activeAfter = new vscode.Position(safeLine, safeChar);
+  editor.selection = new vscode.Selection(activeAfter, activeAfter);
+
+  editor.revealRange(
+    new vscode.Range(activeAfter, activeAfter),
+    vscode.TextEditorRevealType.AtTop
+  );
+
   if (state.coloringEnabled) applyRowtateDecorations();
+
+  // Pulse after applying other decorations so it remains visible
+  pulseRanges(editor, toggledNewRanges, 260);
+}
+
+const pulseDecoration = vscode.window.createTextEditorDecorationType({
+  isWholeLine: true,
+  backgroundColor: "rgba(122, 90, 18, 0.35)", // gold-ish
+  borderRadius: "4px",
+});
+
+function pulseRanges(
+  editor: vscode.TextEditor,
+  ranges: vscode.Range[],
+  ms = 300
+) {
+  if (!ranges.length) return;
+
+  editor.setDecorations(pulseDecoration, ranges);
+
+  setTimeout(() => {
+    // clear
+    try {
+      editor.setDecorations(pulseDecoration, []);
+    } catch {}
+  }, ms);
+}
+
+function findSegmentIndexAtLine(segments: Segment[], line: number): number {
+  // Prefer the block containing the line; if the line is in blanks, pick nearest block above.
+  let bestAbove = -1;
+
+  for (let i = 0; i < segments.length; i++) {
+    const s = segments[i];
+    if (s.startLine <= line && s.endLine >= line) return i;
+    if (s.endLine < line) bestAbove = i;
+  }
+
+  return bestAbove >= 0 ? bestAbove : 0;
 }
 
 export { toggleSelectedBlocksLayout };
@@ -216,4 +312,26 @@ function getSelectedBlockSegmentIndexes(
   }
 
   return selected;
+}
+
+function findAnchorTextInBlock(blockLines: string[]): string | undefined {
+  // Pick something likely to survive the conversion:
+  // - first non-empty, non-comment line
+  for (const l of blockLines) {
+    const t = l.trim();
+    if (!t) continue;
+    if (t.startsWith("//")) continue;
+    return t;
+  }
+  return undefined;
+}
+
+function findLineIndexByExactTrimmedLine(
+  allLines: string[],
+  trimmedNeedle: string
+): number {
+  for (let i = 0; i < allLines.length; i++) {
+    if (allLines[i].trim() === trimmedNeedle) return i;
+  }
+  return -1;
 }

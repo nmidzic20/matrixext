@@ -135,25 +135,9 @@ export function getSidebarHtml(
     </div>
   </div>
 
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggle">Toggle Key/Value Layout</button>
-    <div class="sub">
-      <a data-bind="rowtate.toggle">Bind key…</a>
-      <span class="dot">•</span>
-      <a data-copy="rowtate.toggle">Copy command id</a>
-    </div>
+  <div class="hint">
+    Tip: "Toggle Selection Layout" command acts on block(s) under your cursor (single block) or selection (single or multiple blocks).
   </div>
-
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggleColoring">Toggle Colouring</button>
-    <div class="sub">
-      <a data-bind="rowtate.toggleColoring">Bind key…</a>
-      <span class="dot">•</span>
-      <a data-copy="rowtate.toggleColoring">Copy command id</a>
-    </div>
-  </div>
-
-  <div class="sep"></div>
 
   <div class="cmd">
     <button class="btn" data-cmd="rowtate.toggleBlocksLayout">
@@ -166,8 +150,23 @@ export function getSidebarHtml(
     </div>
   </div>
 
+<div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggle">Toggle File Layout</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggle">Bind key…</a>
+      <span class="dot">•</span>
+      <a data-copy="rowtate.toggle">Copy command id</a>
+    </div>
+  </div>
 
-  <div class="sep"></div>
+  <div class="cmd">
+    <button class="btn" data-cmd="rowtate.toggleColours">Toggle Colours</button>
+    <div class="sub">
+      <a data-bind="rowtate.toggleColours">Bind key…</a>
+      <span class="dot">•</span>
+      <a data-copy="rowtate.toggleColours">Copy command id</a>
+    </div>
+  </div>
 
   <div class="cmd">
     <button class="btn" data-cmd="rowtate.reorderVertical">Reorder (Vertical rows)</button>
@@ -185,10 +184,6 @@ export function getSidebarHtml(
       <span class="dot">•</span>
       <a data-copy="rowtate.pickColors">Copy command id</a>
     </div>
-  </div>
-
-  <div class="hint">
-    Tip: selection commands act on block(s) under your cursor/selection.
   </div>
 
   <script nonce="${nonce}">

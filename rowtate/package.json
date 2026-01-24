@@ -31,7 +31,7 @@
         "key": "ctrl+alt+t"
       },
       {
-        "command": "rowtate.toggleColoring",
+        "command": "rowtate.toggleColours",
         "key": "ctrl+alt+c"
       },
       {
@@ -71,7 +71,7 @@
         "title": "Rowtate: Toggle Key/Value Layout"
       },
       {
-        "command": "rowtate.toggleColoring",
+        "command": "rowtate.toggleColours",
         "title": "Rowtate: Toggle Coloring"
       },
       {
