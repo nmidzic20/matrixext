@@ -199,22 +199,16 @@ function getSidebarHtml(webview, opts) {
   <div class="sep"></div>
 
   <div class="cmd">
-    <button class="btn" data-cmd="rowtate.blocksToVertical">Selection \u2192 Vertical</button>
+    <button class="btn" data-cmd="rowtate.toggleBlocksLayout">
+      Toggle Selection Layout (Horizontal \u2194 Vertical)
+    </button>
     <div class="sub">
-      <a data-bind="rowtate.blocksToVertical">Bind key\u2026</a>
+      <a data-bind="rowtate.toggleBlocksLayout">Bind key\u2026</a>
       <span class="dot">\u2022</span>
-      <a data-copy="rowtate.blocksToVertical">Copy command id</a>
+      <a data-copy="rowtate.toggleBlocksLayout">Copy command id</a>
     </div>
   </div>
 
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.blocksToHorizontal">Selection \u2192 Horizontal</button>
-    <div class="sub">
-      <a data-bind="rowtate.blocksToHorizontal">Bind key\u2026</a>
-      <span class="dot">\u2022</span>
-      <a data-copy="rowtate.blocksToHorizontal">Copy command id</a>
-    </div>
-  </div>
 
   <div class="sep"></div>
 
@@ -888,7 +882,7 @@ function clearRowtateDecorations() {
 
 // src/commands/convertBlocks.ts
 var vscode6 = __toESM(require("vscode"));
-async function convertSelectedBlocks(direction) {
+async function toggleSelectedBlocksLayout() {
   const editor = vscode6.window.activeTextEditor;
   if (!editor) {
     vscode6.window.showErrorMessage("Rowtate: No active text editor.");
@@ -907,6 +901,24 @@ async function convertSelectedBlocks(direction) {
     vscode6.window.showWarningMessage("Rowtate: No blocks selected.");
     return;
   }
+  let selectedHasHorizontal = false;
+  let selectedHasVertical = false;
+  for (const si of selectedSegIndexes) {
+    const seg = segments[si];
+    if (!seg || seg.kind !== "block") continue;
+    if (isHorizontalBlock(seg.lines)) selectedHasHorizontal = true;
+    else if (isVerticalBlock(seg.lines)) selectedHasVertical = true;
+    else {
+      selectedHasVertical = true;
+    }
+  }
+  if (selectedHasHorizontal && selectedHasVertical) {
+    vscode6.window.showWarningMessage(
+      "Rowtate: Selected blocks are mixed (some horizontal, some vertical). Select blocks in the same layout and try again."
+    );
+    return;
+  }
+  const direction = selectedHasHorizontal ? "toVertical" : "toHorizontal";
   const newLines = [];
   for (let si = 0; si < segments.length; si++) {
     const seg = segments[si];
@@ -919,15 +931,13 @@ async function convertSelectedBlocks(direction) {
       continue;
     }
     if (direction === "toVertical") {
-      if (isHorizontalBlock(seg.lines)) {
+      if (isHorizontalBlock(seg.lines))
         newLines.push(...convertBlockToVertical(seg.lines));
-      } else {
-        newLines.push(...seg.lines);
-      }
+      else newLines.push(...seg.lines);
     } else {
-      if (isVerticalBlock(seg.lines)) {
+      if (isVerticalBlock(seg.lines))
         newLines.push(...convertBlockToHorizontal(seg.lines));
-      } else {
+      else {
         newLines.push(...seg.lines);
       }
     }
@@ -1479,12 +1489,8 @@ function registerCommands(context) {
       openReorderWebview
     ),
     vscode9.commands.registerCommand(
-      "rowtate.blocksToVertical",
-      () => convertSelectedBlocks("toVertical")
-    ),
-    vscode9.commands.registerCommand(
-      "rowtate.blocksToHorizontal",
-      () => convertSelectedBlocks("toHorizontal")
+      "rowtate.toggleBlocksLayout",
+      () => toggleSelectedBlocksLayout()
     ),
     vscode9.commands.registerCommand(
       "rowtate.pickColors",

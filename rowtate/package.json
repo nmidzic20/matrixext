@@ -39,12 +39,8 @@
         "key": "ctrl+alt+r"
       },
       {
-        "command": "rowtate.blocksToVertical",
-        "key": "ctrl+alt+v"
-      },
-      {
-        "command": "rowtate.blocksToHorizontal",
-        "key": "ctrl+alt+h"
+        "command": "rowtate.toggleBlocksLayout",
+        "key": "ctrl+alt+o"
       },
       {
         "command": "rowtate.pickColors",
@@ -83,12 +79,8 @@
         "title": "Rowtate: Reorder Rows (Vertical Drag & Drop)"
       },
       {
-        "command": "rowtate.blocksToVertical",
-        "title": "Rowtate: Convert Selected Blocks to Vertical"
-      },
-      {
-        "command": "rowtate.blocksToHorizontal",
-        "title": "Rowtate: Convert Selected Blocks to Horizontal"
+        "command": "rowtate.toggleBlocksLayout",
+        "title": "Rowtate: Toggle Selected Blocks Layout (Horizontal ↔ Vertical)"
       },
       {
         "command": "rowtate.pickColors",

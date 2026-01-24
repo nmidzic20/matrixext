@@ -1,7 +1,10 @@
 import * as vscode from "vscode";
 import { toggleKeyValueLayout } from "./toggleLayout";
 import { toggleColoring } from "./toggleColoring";
-import { convertSelectedBlocks } from "./convertBlocks";
+import {
+  convertSelectedBlocks,
+  toggleSelectedBlocksLayout,
+} from "./convertBlocks";
 import { openColorPickerWebview } from "../webviews/colourPicker/open";
 import { openReorderWebview } from "../webviews/reorder/open";
 
@@ -13,11 +16,8 @@ export function registerCommands(context: vscode.ExtensionContext) {
       "rowtate.reorderVertical",
       openReorderWebview
     ),
-    vscode.commands.registerCommand("rowtate.blocksToVertical", () =>
-      convertSelectedBlocks("toVertical")
-    ),
-    vscode.commands.registerCommand("rowtate.blocksToHorizontal", () =>
-      convertSelectedBlocks("toHorizontal")
+    vscode.commands.registerCommand("rowtate.toggleBlocksLayout", () =>
+      toggleSelectedBlocksLayout()
     ),
     vscode.commands.registerCommand("rowtate.pickColors", () =>
       openColorPickerWebview(context)

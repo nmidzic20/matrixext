@@ -156,22 +156,16 @@ export function getSidebarHtml(
   <div class="sep"></div>
 
   <div class="cmd">
-    <button class="btn" data-cmd="rowtate.blocksToVertical">Selection → Vertical</button>
+    <button class="btn" data-cmd="rowtate.toggleBlocksLayout">
+      Toggle Selection Layout (Horizontal ↔ Vertical)
+    </button>
     <div class="sub">
-      <a data-bind="rowtate.blocksToVertical">Bind key…</a>
+      <a data-bind="rowtate.toggleBlocksLayout">Bind key…</a>
       <span class="dot">•</span>
-      <a data-copy="rowtate.blocksToVertical">Copy command id</a>
+      <a data-copy="rowtate.toggleBlocksLayout">Copy command id</a>
     </div>
   </div>
 
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.blocksToHorizontal">Selection → Horizontal</button>
-    <div class="sub">
-      <a data-bind="rowtate.blocksToHorizontal">Bind key…</a>
-      <span class="dot">•</span>
-      <a data-copy="rowtate.blocksToHorizontal">Copy command id</a>
-    </div>
-  </div>
 
   <div class="sep"></div>
 
