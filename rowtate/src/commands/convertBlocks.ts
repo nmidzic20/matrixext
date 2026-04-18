@@ -43,9 +43,19 @@ async function toggleSelectedBlocksLayout() {
     const seg = segments[si];
     if (!seg || seg.kind !== "block") continue;
 
-    if (isHorizontalBlock(seg.lines)) selectedHasHorizontal = true;
-    else if (isVerticalBlock(seg.lines)) selectedHasVertical = true;
-    else selectedHasVertical = true; // unknown => vertical-ish
+    // Ignore comment-only / neutral blocks when deciding direction.
+    if (isCommentOnlyBlock(seg.lines)) continue;
+
+    if (isHorizontalBlock(seg.lines)) {
+      selectedHasHorizontal = true;
+    } else if (isVerticalBlock(seg.lines)) {
+      selectedHasVertical = true;
+    }
+  }
+
+  if (!selectedHasHorizontal && !selectedHasVertical) {
+    vscode.window.showWarningMessage("Rowtate: No convertible blocks selected.");
+    return;
   }
 
   // Mixed selection => warn and do nothing
@@ -334,4 +344,17 @@ function findLineIndexByExactTrimmedLine(
     if (allLines[i].trim() === trimmedNeedle) return i;
   }
   return -1;
+}
+
+function isCommentOnlyBlock(blockLines: string[]): boolean {
+  let hasAnyNonEmpty = false;
+
+  for (const line of blockLines) {
+    const t = line.trim();
+    if (!t) continue;
+    hasAnyNonEmpty = true;
+    if (!t.startsWith("//")) return false;
+  }
+
+  return hasAnyNonEmpty;
 }
