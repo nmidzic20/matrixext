@@ -2,7 +2,7 @@
   "name": "rowtate",
   "displayName": "Rowtate",
   "description": "Transpose long rows in CSV files for easier key-value editing",
-  "version": "0.0.1",
+  "version": "1.0.0",
   "publisher": "soraki",
   "license": "MIT",
   "icon": "media/icon.png",
