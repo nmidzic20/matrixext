@@ -4,7 +4,7 @@ import { getNonce } from "../../utils/nonce";
 
 export function getSidebarHtml(
   webview: vscode.Webview,
-  opts: { logoUri: string }
+  opts: { logoUri: string },
 ): string {
   const nonce = getNonce();
 
@@ -141,7 +141,7 @@ export function getSidebarHtml(
 
   <div class="cmd">
     <button class="btn" data-cmd="rowtate.toggleBlocksLayout">
-      Toggle Selection Layout (Horizontal ↔ Vertical)
+      Toggle Selection (default: Ctrl+Alt+Q)
     </button>
     <div class="sub">
       <a data-bind="rowtate.toggleBlocksLayout">Bind key…</a>
@@ -151,20 +151,11 @@ export function getSidebarHtml(
   </div>
 
 <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggle">Toggle File Layout</button>
+    <button class="btn" data-cmd="rowtate.toggle">Toggle File (default: Ctrl+Alt+R)</button>
     <div class="sub">
       <a data-bind="rowtate.toggle">Bind key…</a>
       <span class="dot">•</span>
       <a data-copy="rowtate.toggle">Copy command id</a>
-    </div>
-  </div>
-
-  <div class="cmd">
-    <button class="btn" data-cmd="rowtate.toggleColours">Toggle Colours</button>
-    <div class="sub">
-      <a data-bind="rowtate.toggleColours">Bind key…</a>
-      <span class="dot">•</span>
-      <a data-copy="rowtate.toggleColours">Copy command id</a>
     </div>
   </div>
 

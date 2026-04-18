@@ -51,7 +51,7 @@ async function toggleSelectedBlocksLayout() {
   // Mixed selection => warn and do nothing
   if (selectedHasHorizontal && selectedHasVertical) {
     vscode.window.showWarningMessage(
-      "Rowtate: Selected blocks are mixed (some horizontal, some vertical). Select blocks in the same layout and try again."
+      "Rowtate: Selected blocks are mixed (some horizontal, some vertical). Select blocks in the same layout and try again.",
     );
     return;
   }
@@ -135,7 +135,7 @@ async function toggleSelectedBlocksLayout() {
 
   const fullRange = new vscode.Range(
     doc.positionAt(0),
-    doc.positionAt(text.length)
+    doc.positionAt(text.length),
   );
 
   const edit = new vscode.WorkspaceEdit();
@@ -159,10 +159,10 @@ async function toggleSelectedBlocksLayout() {
 
   editor.revealRange(
     new vscode.Range(activeAfter, activeAfter),
-    vscode.TextEditorRevealType.AtTop
+    vscode.TextEditorRevealType.AtTop,
   );
 
-  if (state.coloringEnabled) applyRowtateDecorations();
+  applyRowtateDecorations();
 
   // Pulse after applying other decorations so it remains visible
   pulseRanges(editor, toggledNewRanges, 260);
@@ -177,7 +177,7 @@ const pulseDecoration = vscode.window.createTextEditorDecorationType({
 function pulseRanges(
   editor: vscode.TextEditor,
   ranges: vscode.Range[],
-  ms = 300
+  ms = 300,
 ) {
   if (!ranges.length) return;
 
@@ -267,19 +267,19 @@ async function convertSelectedBlocks(direction: "toVertical" | "toHorizontal") {
 
   const fullRange = new vscode.Range(
     doc.positionAt(0),
-    doc.positionAt(text.length)
+    doc.positionAt(text.length),
   );
 
   const edit = new vscode.WorkspaceEdit();
   edit.replace(doc.uri, fullRange, newText);
   await vscode.workspace.applyEdit(edit);
-  if (state.coloringEnabled) applyRowtateDecorations();
+  applyRowtateDecorations();
 }
 export { convertSelectedBlocks };
 
 function getSelectedBlockSegmentIndexes(
   editor: vscode.TextEditor,
-  segments: Segment[]
+  segments: Segment[],
 ): Set<number> {
   const selected = new Set<number>();
 
@@ -295,7 +295,7 @@ function getSelectedBlockSegmentIndexes(
     if (sel.isEmpty) {
       const idx = segments.findIndex(
         (s) =>
-          s.kind === "block" && s.startLine <= selMin && s.endLine >= selMin
+          s.kind === "block" && s.startLine <= selMin && s.endLine >= selMin,
       );
       if (idx >= 0) selected.add(idx);
       continue;
@@ -328,7 +328,7 @@ function findAnchorTextInBlock(blockLines: string[]): string | undefined {
 
 function findLineIndexByExactTrimmedLine(
   allLines: string[],
-  trimmedNeedle: string
+  trimmedNeedle: string,
 ): number {
   for (let i = 0; i < allLines.length; i++) {
     if (allLines[i].trim() === trimmedNeedle) return i;

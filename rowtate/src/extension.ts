@@ -13,24 +13,20 @@ export function activate(context: vscode.ExtensionContext) {
 
   const provider = new RowtateSidebarProvider(context.extensionUri);
   context.subscriptions.push(
-    vscode.window.registerWebviewViewProvider("rowtate.sidebar", provider)
+    vscode.window.registerWebviewViewProvider("rowtate.sidebar", provider),
   );
 
-  // Build decorations from settings (instead of hardcoded colors)
   rebuildDecorations(context);
 
-  // Status bar item
   state.statusItem = vscode.window.createStatusBarItem(
     vscode.StatusBarAlignment.Left,
-    1000
+    1000,
   );
   state.statusItem.hide();
   context.subscriptions.push(state.statusItem);
 
-  // Commands
   registerCommands(context);
 
-  // Rebuild decorations when Rowtate color settings change
   context.subscriptions.push(
     vscode.workspace.onDidChangeConfiguration((e) => {
       if (
@@ -39,20 +35,21 @@ export function activate(context: vscode.ExtensionContext) {
         e.affectsConfiguration("rowtate.colors.value")
       ) {
         rebuildDecorations(context);
-        if (state.coloringEnabled) applyRowtateDecorations();
+        applyRowtateDecorations();
       }
-    })
+    }),
   );
 
-  // Re-apply on editor/document changes when enabled
   context.subscriptions.push(
     vscode.window.onDidChangeActiveTextEditor(() => {
-      if (state.coloringEnabled) applyRowtateDecorations();
+      applyRowtateDecorations();
     }),
     vscode.workspace.onDidChangeTextDocument(() => {
-      if (state.coloringEnabled) applyRowtateDecorations();
-    })
+      applyRowtateDecorations();
+    }),
   );
+
+  applyRowtateDecorations();
 }
 
 export function deactivate() {}

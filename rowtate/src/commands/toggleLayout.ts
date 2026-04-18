@@ -67,14 +67,14 @@ async function toggleKeyValueLayout() {
 
   const fullRange = new vscode.Range(
     doc.positionAt(0),
-    doc.positionAt(text.length)
+    doc.positionAt(text.length),
   );
 
   const edit = new vscode.WorkspaceEdit();
   edit.replace(doc.uri, fullRange, newText);
   await vscode.workspace.applyEdit(edit);
 
-  if (state.coloringEnabled) applyRowtateDecorations();
+  applyRowtateDecorations();
 
   if (mode === "mixed") {
     setTimeout(() => state.statusItem!.hide(), 2500);

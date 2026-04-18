@@ -47,8 +47,8 @@ function applyRowtateDecorations() {
       commentRanges.push(
         new vscode.Range(
           new vscode.Position(lineNo, 0),
-          new vscode.Position(lineNo, line.length)
-        )
+          new vscode.Position(lineNo, line.length),
+        ),
       );
     }
   }
@@ -59,10 +59,9 @@ function applyRowtateDecorations() {
   for (const seg of segments) {
     if (seg.kind !== "block") continue;
 
-    if (isHorizontalBlock(seg.lines)) {
-      applyHorizontalDecorationsForSegment(seg, keyRanges, valueRanges);
-    } else {
-      // Treat as vertical by default; this keeps coloring stable in mixed files
+    // Only vertical blocks get key/value coloring.
+    // Horizontal blocks remain uncolored.
+    if (!isHorizontalBlock(seg.lines)) {
       applyVerticalDecorationsForSegment(seg, keyRanges, valueRanges);
     }
   }
@@ -75,7 +74,7 @@ function applyRowtateDecorations() {
 function applyVerticalDecorationsForSegment(
   seg: Segment,
   keyRanges: vscode.Range[],
-  valueRanges: vscode.Range[]
+  valueRanges: vscode.Range[],
 ) {
   // seg.lines correspond to absolute lines seg.startLine ... seg.endLine
   for (let i = 0; i < seg.lines.length; i++) {
@@ -104,48 +103,11 @@ function applyVerticalDecorationsForSegment(
       const valueEnd = raw.length;
       if (valueStart <= valueEnd) {
         valueRanges.push(
-          new vscode.Range(absLineNo, valueStart, absLineNo, valueEnd)
+          new vscode.Range(absLineNo, valueStart, absLineNo, valueEnd),
         );
       }
     }
   }
-}
-
-function applyHorizontalDecorationsForSegment(
-  seg: Segment,
-  keyRanges: vscode.Range[],
-  valueRanges: vscode.Range[]
-) {
-  const trimmed = seg.lines.map((l) => l.trim());
-
-  // Find first non-empty, non-comment line = header, next non-empty non-comment = values
-  let headerIdx = -1;
-  for (let i = 0; i < trimmed.length; i++) {
-    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
-    headerIdx = i;
-    break;
-  }
-  if (headerIdx < 0) return;
-
-  let valuesIdx = -1;
-  for (let i = headerIdx + 1; i < trimmed.length; i++) {
-    if (trimmed[i] === "" || trimmed[i].startsWith("//")) continue;
-    valuesIdx = i;
-    break;
-  }
-  if (valuesIdx < 0) return;
-
-  const headerAbs = seg.startLine + headerIdx;
-  const valuesAbs = seg.startLine + valuesIdx;
-
-  // Entire header line as keys
-  keyRanges.push(
-    new vscode.Range(headerAbs, 0, headerAbs, seg.lines[headerIdx].length)
-  );
-  // Entire values line as values
-  valueRanges.push(
-    new vscode.Range(valuesAbs, 0, valuesAbs, seg.lines[valuesIdx].length)
-  );
 }
 
 export { rebuildDecorations, applyRowtateDecorations };

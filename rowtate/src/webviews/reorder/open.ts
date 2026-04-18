@@ -29,7 +29,7 @@ async function openReorderWebview() {
     !model.includedSegIndexes.some((i) => model.segments[i]?.kind === "block")
   ) {
     vscode.window.showWarningMessage(
-      "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected)."
+      "Rowtate: No vertical blocks found to reorder (only horizontal blocks detected).",
     );
     return;
   }
@@ -41,7 +41,7 @@ async function openReorderWebview() {
     {
       enableScripts: true,
       retainContextWhenHidden: true,
-    }
+    },
   );
 
   const colors = getRowtateColors();
@@ -50,7 +50,7 @@ async function openReorderWebview() {
   panel.webview.html = getReorderWebviewHtml(
     panel.webview,
     model.flatLines,
-    colors
+    colors,
   );
 
   panel.webview.onDidReceiveMessage(async (msg) => {
@@ -62,7 +62,7 @@ async function openReorderWebview() {
 
       if (newFlat.length !== model.flatLines.length) {
         vscode.window.showErrorMessage(
-          "Rowtate: Reorder apply failed (line count mismatch)."
+          "Rowtate: Reorder apply failed (line count mismatch).",
         );
         return;
       }
@@ -92,7 +92,7 @@ async function openReorderWebview() {
 
       const fullRange = new vscode.Range(
         doc.positionAt(0),
-        doc.positionAt(text.length)
+        doc.positionAt(text.length),
       );
 
       const edit = new vscode.WorkspaceEdit();
@@ -100,7 +100,7 @@ async function openReorderWebview() {
       await vscode.workspace.applyEdit(edit);
       await doc.save();
 
-      if (state.coloringEnabled) applyRowtateDecorations();
+      applyRowtateDecorations();
 
       panel.dispose();
     }

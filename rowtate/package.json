@@ -31,16 +31,12 @@
         "key": "ctrl+alt+t"
       },
       {
-        "command": "rowtate.toggleColours",
-        "key": "ctrl+alt+c"
-      },
-      {
         "command": "rowtate.reorderVertical",
         "key": "ctrl+alt+r"
       },
       {
         "command": "rowtate.toggleBlocksLayout",
-        "key": "ctrl+alt+o"
+        "key": "ctrl+alt+q"
       },
       {
         "command": "rowtate.pickColors",

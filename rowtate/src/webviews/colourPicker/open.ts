@@ -11,7 +11,7 @@ async function openColorPickerWebview(context: vscode.ExtensionContext) {
     "rowtateColors",
     "Rowtate: Pick Colors",
     vscode.ViewColumn.Active,
-    { enableScripts: true, retainContextWhenHidden: false }
+    { enableScripts: true, retainContextWhenHidden: false },
   );
 
   panel.webview.html = getColorPickerHtml(panel.webview, colors);
@@ -40,7 +40,7 @@ async function openColorPickerWebview(context: vscode.ExtensionContext) {
       await cfg.update("colors.value", value, target);
 
       rebuildDecorations(context);
-      if (state.coloringEnabled) applyRowtateDecorations();
+      applyRowtateDecorations();
 
       panel.dispose();
     }
@@ -61,7 +61,7 @@ async function openColorPickerWebview(context: vscode.ExtensionContext) {
       await cfg.update("colors.value", undefined, target);
 
       rebuildDecorations(context);
-      if (state.coloringEnabled) applyRowtateDecorations();
+      applyRowtateDecorations();
 
       panel.dispose();
     }
