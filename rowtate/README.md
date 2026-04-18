@@ -1,4 +1,4 @@
-#Rowtate
+# Rowtate
 
 Rowtate helps you quickly switch between horizontal CSV rows and vertical key–value layouts for easier editing, review and reordering. Works only with keys starting with #, such as
 
@@ -7,7 +7,7 @@ Rowtate helps you quickly switch between horizontal CSV rows and vertical key–
 100001,"Customer 01 Holdings","customer01@example.com","United Kingdom","EMEA","Enterprise",125,11250.00,"2026-09-30","Owner 01","Active","Referral","2026-04-18 09:01","sso;audit;exports;api","Large strategic account with multiple departments and custom workflows",CRM-900001,"Europe/London","en-GB","Annual","priority;uk;vip","Platinum",true,"Technology",510,135000
 ```
 
-##Features
+## Features
 
 - Toggle between row and key/value layouts
 
