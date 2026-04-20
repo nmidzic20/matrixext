@@ -2,12 +2,16 @@
   "name": "rowtate",
   "displayName": "Rowtate",
   "description": "Transpose long rows in CSV files for easier key-value editing",
-  "version": "1.0.0",
+  "version": "1.0.3",
   "publisher": "soraki",
   "license": "MIT",
   "icon": "media/icon.png",
   "engines": {
     "vscode": "^1.106.1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/nmidzic20/matrixext"
   },
   "categories": [
     "Other"

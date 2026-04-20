@@ -21,4 +21,4 @@ Keyboard shortcuts are included and can be customized in VS Code.
 
 ## Demo
 
-![Rowtate Demo](media/demo.gif)
+<img src="https://raw.githubusercontent.com/YOURNAME/rowtate/main/media/demo.gif" width="1000">
